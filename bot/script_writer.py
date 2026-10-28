@@ -65,53 +65,142 @@ Rules:
   different problem, a different use) so the new Short is not a repeat."""
 
 
-def write(topic, previous_titles):
-    """Returns the script dict. Uses the topic's fixed steps when no API key is set."""
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("ANTHROPIC_API_KEY not set - using the fixed template script.")
-        return template(topic)
-
-    link = SITE + topic["path"]
+def _prompt(topic, previous_titles, ask):
     earlier = "\n".join(f"- {t}" for t in previous_titles) or "(none yet)"
-    prompt = (
+    return (
         f"Tool: {topic['te_name']}\n"
-        f"Tool link: {link}\n"
+        f"Tool link: {SITE + topic['path']}\n"
         f"Tool facts: {topic['facts'].strip()}\n"
         f"Basic steps: {' / '.join(topic['steps'])}\n\n"
         f"Earlier titles for this tool:\n{earlier}\n\n"
-        "Write the script for the next Short about this tool."
+        f"{ask}"
     )
 
+
+def _ask(system, prompt, schema, link):
+    """One structured Claude call. Returns the script dict, or None when it did not work."""
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        print("ANTHROPIC_API_KEY not set.")
+        return None
     client = anthropic.Anthropic()
     try:
         response = client.beta.messages.create(
             model=MODEL,
-            max_tokens=16000,
+            max_tokens=32000,
             betas=["server-side-fallback-2026-07-01"],
             fallbacks="default",
             output_config={
                 "effort": "medium",
-                "format": {"type": "json_schema", "schema": SCHEMA},
+                "format": {"type": "json_schema", "schema": schema},
             },
-            system=SYSTEM,
+            system=system,
             messages=[{"role": "user", "content": prompt}],
         )
     except anthropic.APIConnectionError as e:
-        print(f"Could not reach the Claude API ({e}) - using the fixed template script.")
-        return template(topic)
+        print(f"Could not reach the Claude API ({e}).")
+        return None
     except anthropic.APIStatusError as e:
-        print(f"Claude API error {e.status_code}: {e.message} - using the fixed template script.")
-        return template(topic)
+        print(f"Claude API error {e.status_code}: {e.message}")
+        return None
 
     if response.stop_reason in ("refusal", "max_tokens"):
-        print(f"Claude stopped with {response.stop_reason} - using the fixed template script.")
-        return template(topic)
+        print(f"Claude stopped with {response.stop_reason}.")
+        return None
 
     text = next(b.text for b in response.content if b.type == "text")
     script = json.loads(text)
     if link not in script["description"]:
         script["description"] = f"🔗 Free tool: {link}\n\n" + script["description"]
     return script
+
+
+def write(topic, previous_titles):
+    """Short script. Falls back to the topic's fixed steps when Claude is not available."""
+    link = SITE + topic["path"]
+    script = _ask(SYSTEM, _prompt(topic, previous_titles, "Write the script for the next Short about this tool."),
+                  SCHEMA, link)
+    if script is None:
+        print("  using the fixed template script.")
+        return template(topic)
+    return script
+
+
+# ---------------------------------------------------------------- long videos
+
+# Order of the long video. intro and outro are title cards; the rest is screen recording.
+LONG_PARTS = ["intro", "home", "search", "open", "action", "result", "more", "outro"]
+
+_LONG_PART = {
+    "type": "object",
+    "properties": {
+        "heading": {"type": "string"},
+        "narration": {"type": "string"},
+    },
+    "required": ["heading", "narration"],
+    "additionalProperties": False,
+}
+
+LONG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "title": {"type": "string"},
+        "description": {"type": "string"},
+        "tags": {"type": "array", "items": {"type": "string"}},
+        "hook_text": {"type": "string"},
+        **{part: _LONG_PART for part in LONG_PARTS},
+    },
+    "required": ["title", "description", "tags", "hook_text", *LONG_PARTS],
+    "additionalProperties": False,
+}
+
+LONG_SYSTEM = """You write full tutorial videos (about 5 minutes) for "PDFDon Telugu", a YouTube channel
+that shows people in Andhra Pradesh and Telangana how to do everyday document and photo jobs with the
+free tools on pdfdon.com. Viewers are students filling exam and job forms, shop owners, and ordinary
+phone and computer users. Many are not comfortable with technology, so explain slowly and clearly.
+
+Write in simple spoken Telugu, like a friendly teacher sitting next to the viewer. Keep common English
+tech words in English script (Photo, PDF, KB, Upload, Download, Resize, Form, Website, Search). A Telugu
+text-to-speech voice reads the narration: write full words, no emojis, symbols, bullet points or
+markdown, and spell numbers the way they should be read.
+
+The screen recording shows these parts in this order. Write the narration for what is on screen:
+- intro (title card, about 20 seconds, 40-50 words): the problem this tool solves and what the viewer
+  will learn. Ask them to watch till the end.
+- home (about 30 seconds, 60-70 words): the pdfdon.com home page being scrolled. Free, no login, no
+  watermark, works on mobile and computer, files stay on your device.
+- search (about 20 seconds, 40-50 words): typing the tool name in the website's search box.
+- open (about 50 seconds, 100-120 words): the tool page opens. Explain when people need this tool and
+  what to keep ready (for example the exam notification with the required size).
+- action (about 90 seconds, 180-220 words): selecting the file or typing the details, step by step.
+  Explain each setting the facts mention and why it matters.
+- result (about 70 seconds, 140-160 words): pressing the main button, checking the result and
+  downloading it. How to check the result is right before using it.
+- more (about 70 seconds, 140-160 words): the rest of the page is scrolled. Common mistakes people
+  make and simple tips to avoid them.
+- outro (title card, about 25 seconds, 50-60 words): short recap; like, share with friends who need
+  it, subscribe, and comment which tool to explain next.
+
+Rules:
+- heading: the chapter name shown on screen and in the YouTube chapters, 2 to 5 words, Telugu or
+  English.
+- Only state what the tool facts say. Never invent buttons, options, limits, prices, or the exact
+  size rules of a particular exam; tell viewers to check their own notification for the numbers.
+- title: under 90 characters, Telugu and English mixed, with the words people search for. Not a
+  Short, so no #Shorts. No clickbait that the video does not deliver.
+- description: first line is the tool link exactly as given, then 4 to 6 short lines in Telugu about
+  what the video teaches, then 3 to 5 hashtags including #PDFDonTelugu. Chapters are added
+  automatically, so do not write timestamps.
+- tags: 12 to 18 search phrases in English and Telugu, lowercase.
+- hook_text: 2 to 4 big words for the thumbnail.
+- When earlier titles for this tool are listed, choose a different angle so the video is not a
+  repeat."""
+
+
+def write_long(topic, previous_titles):
+    """Long tutorial script, or None: a long video needs Claude (there is no fixed template)."""
+    return _ask(LONG_SYSTEM,
+                _prompt(topic, previous_titles, "Write the script for the next full tutorial video about this tool."),
+                LONG_SCHEMA, SITE + topic["path"])
 
 
 def template(topic):

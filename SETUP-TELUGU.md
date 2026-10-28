@@ -1,13 +1,22 @@
-# PDFDon Telugu Shorts Bot: Setup (తెలుగులో)
+# PDFDon Telugu Video Bot: Setup (తెలుగులో)
 
-ప్రతి **సోమ, బుధ, శుక్ర ఉదయం 10 గంటలకు** ఈ bot ఇవి చేస్తుంది:
+| రోజు (ఉదయం 10 గంటలు) | Video |
+|---|---|
+| సోమ, బుధ, శుక్ర | **Short** (1080×1920, సుమారు 30 సెకన్లు) |
+| మంగళ, గురు | **పొడవైన tutorial** (1920×1080, సుమారు 5 నిమిషాలు, chapters తో) |
+
+ప్రతిసారీ bot ఇవి చేస్తుంది:
 
 1. `topics.yaml` నుండి తర్వాతి pdfdon.com tool ఎంచుకుంటుంది
 2. Claude తో Telugu script, title, description, tags రాయిస్తుంది
-3. Telugu AI voice (Microsoft Edge voice, free) తో narration తయారు చేస్తుంది
-4. pdfdon.com tool ని phone size browser లో తెరిచి screenshots తీస్తుంది
-5. 1080×1920 Short video + thumbnail తయారు చేస్తుంది
-6. YouTube కి **Private** గా upload చేస్తుంది (keys పెట్టిన తర్వాత మాత్రమే)
+3. Telugu AI voice (Microsoft Edge voice; అది పని చేయకపోతే Google voice) తో narration తయారు చేస్తుంది
+4. pdfdon.com ని నిజమైన browser లో తెరిచి **screen record** చేస్తుంది: cursor కదులుతుంది, sample photo upload అవుతుంది, అక్షరాలు type అవుతాయి, button నొక్కుతుంది
+5. Video + thumbnail తయారు చేస్తుంది
+6. YouTube కి **Public** గా upload చేస్తుంది. ఏదైనా step తప్పితే **Private** గా ఉంచుతుంది
+
+⚠️ **పొడవైన videos కి `ANTHROPIC_API_KEY` తప్పనిసరి** (Step 3). Key లేకపోతే మంగళ, గురు runs "Long video skipped" అని ఆగిపోతాయి. Shorts మాత్రం key లేకపోయినా వస్తాయి.
+
+**చేతితో run చేయడం:** Actions → PDFDon Shorts → Run workflow → **Video type** (short / long), **Test only**, **Topic id** ఎంచుకోండి.
 
 ---
 
@@ -39,7 +48,7 @@ API key లేకపోతే script `topics.yaml` లోని fixed steps న�
 
 ## Step 3: Claude API key (మంచి scripts కోసం)
 
-1. **console.anthropic.com** లో login అవ్వండి → **Billing** లో credits జోడించండి (ఒక video కి సుమారు ₹5-10 ఖర్చు)
+1. **console.anthropic.com** లో login అవ్వండి → **Billing** లో credits జోడించండి (Short కి సుమారు ₹5-10, పొడవైన video కి సుమారు ₹15-30 ఖర్చు)
 2. **API Keys** → **Create Key** → name `pdfdon-bot` → key copy చేయండి
 3. GitHub repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
    - Name: `ANTHROPIC_API_KEY`
@@ -59,9 +68,10 @@ API key లేకపోతే script `topics.yaml` లోని fixed steps న�
 
 ---
 
-## Step 4: YouTube auto upload (optional, ఎక్కువ పని)
+## Step 4: YouTube auto upload (ఒక్కసారి చేస్తే చాలు, సుమారు 20 నిమిషాలు)
 
-⚠️ **ముందు ఇది తెలుసుకోండి:** Google review (audit) చేయని API project నుండి upload అయిన videos **Private (locked)** అవుతాయి. వాటిని Public చేయలేరు. Auto upload పని చేయాలంటే Google కి audit form పంపి approve అవ్వాలి (కొన్ని రోజుల నుండి వారాలు పట్టవచ్చు). Approve అయ్యే వరకు పైన చెప్పిన manual upload వాడండి.
+Bot ప్రతి video ని **Private** గా upload చేస్తుంది. YouTube Studio లో చూసి, బాగుంటే మీరే **Public** చేయండి.
+ఒక రోజుకు upload limit ఉంటుంది, కానీ వారానికి 3 videos కి అది సరిపోతుంది.
 
 ### 4a. Google Cloud project
 1. **console.cloud.google.com** → పైన project list → **New Project** → name `pdfdon-shorts` → **Create**
@@ -91,12 +101,35 @@ Step 3 లో లాగే ఈ మూడు secrets జోడించండి:
 | `YT_CLIENT_SECRET` | Client secret |
 | `YT_REFRESH_TOKEN` | Refresh token |
 
-### 4d. Audit form
-**support.google.com/youtube/contact/yt_api_form** లో "YouTube API Services - Audit and Quota Extension Form" నింపండి. Use case: "Uploading my own educational Shorts to my own channel PDFDon Telugu (@pdfdontelugu)".
+### 4d. Upload test
+**Actions → PDFDon Shorts → Run workflow** → **Test only ☐ (tick తీసేయండి)** → Run.
+అయ్యాక YouTube Studio → **Content** లో కొత్త video **Private** గా కనిపించాలి.
 
 Secrets పెట్టిన తర్వాత ప్రతి video YouTube Studio లో **Private** గా వస్తుంది. Run page summary లో Studio link ఉంటుంది. చూసి, బాగుంటే **Public** చేయండి.
 
 ---
+
+## Step 5: అన్ని భాషల్లో (subtitles + అనువాద titles)
+
+ప్రతి video తో bot ఇవి కూడా పంపుతుంది:
+- **Telugu subtitles**: ఎప్పుడూ. Viewers ⚙️ → Subtitles → **Auto-translate** తో ఏ భాషలో అయినా చదవొచ్చు
+- **English subtitles**: `ANTHROPIC_API_KEY` ఉంటే
+- **Title, description** English, Hindi, Tamil, Kannada, Malayalam, Marathi, Bengali, Gujarati లో: `ANTHROPIC_API_KEY` ఉంటే. ఎవరి YouTube ఏ భాషలో ఉంటే వాళ్ళకు ఆ title కనిపిస్తుంది
+
+Subtitles upload చేయడానికి YouTube కి ఇంకో permission (`youtube.force-ssl`) కావాలి. అందుకే **కొత్త refresh token** ఒక్కసారి తీసుకోవాలి:
+
+1. **developers.google.com/oauthplayground** → ⚙️ → **Use your own OAuth credentials** → Client ID, Secret paste
+2. ఎడమ వైపు **Input your own scopes** box లో ఈ రెండూ, మధ్యలో ఒక space తో paste చేయండి:
+   ```
+   https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.force-ssl
+   ```
+3. **Authorize APIs** → Gmail → (Advanced → Go to PDFDon Shorts Bot) → రెండు permissions కి **Continue**
+4. **Exchange authorization code for tokens** → కొత్త **Refresh token** copy చేయండి
+5. GitHub → Settings → Secrets and variables → Actions → `YT_REFRESH_TOKEN` పక్కన ✏️ → కొత్త token paste → **Update secret**
+
+ఇది చేయకపోయినా videos upload అవుతాయి. Subtitles మాత్రం "not added (403)" అని log లో వస్తుంది.
+
+**Audio dubbing (voice వేరే భాషలో):** ఇది bot చేయలేదు. YouTube Studio → **Settings → Upload defaults → Advanced settings** లో **automatic dubbing** option కనిపిస్తే on చేయండి. ఆ option అన్ని channels కి, అన్ని భాషలకు ఇంకా రాలేదు.
 
 ## మార్పులు చేయడం
 
