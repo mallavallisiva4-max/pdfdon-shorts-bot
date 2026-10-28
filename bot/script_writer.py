@@ -1,8 +1,11 @@
-"""Writes the Telugu Short script (narration, captions, title, tags) with Claude."""
+"""Writes the Telugu video scripts (narration, captions, title, tags) with Claude, or Gemini's
+free tier when there is no Claude key."""
 import json
 import os
 
 import anthropic
+
+from . import gemini
 
 MODEL = os.environ.get("CLAUDE_MODEL", "claude-opus-5-5")
 SITE = "https://www.pdfdon.com"
@@ -78,10 +81,16 @@ def _prompt(topic, previous_titles, ask):
 
 
 def _ask(system, prompt, schema, link):
-    """One structured Claude call. Returns the script dict, or None when it did not work."""
+    """One structured call: Claude when ANTHROPIC_API_KEY is set, otherwise Gemini's free tier
+    (GEMINI_API_KEY). Returns the script dict, or None when neither worked."""
     if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("ANTHROPIC_API_KEY not set.")
-        return None
+        if not gemini.configured():
+            print("Neither ANTHROPIC_API_KEY nor GEMINI_API_KEY is set.")
+            return None
+        script = gemini.ask_json(system, prompt, schema)
+        if script is not None and link not in script["description"]:
+            script["description"] = f"🔗 Free tool: {link}\n\n" + script["description"]
+        return script
     client = anthropic.Anthropic()
     try:
         response = client.beta.messages.create(

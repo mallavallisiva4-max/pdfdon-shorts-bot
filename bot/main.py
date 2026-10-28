@@ -79,7 +79,8 @@ def main():
     else:
         script = script_writer.write_long(topic, earlier)
         if script is None:
-            msg = "A long video needs the ANTHROPIC_API_KEY secret (Claude writes the 5 minute script)."
+            msg = ("A long video needs a script writer: the GEMINI_API_KEY secret (free) or "
+                   "ANTHROPIC_API_KEY. Check the log above for the error.")
             print(msg)
             summary(f"### Long video skipped\n{msg}")
             return

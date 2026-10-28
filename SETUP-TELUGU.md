@@ -46,7 +46,18 @@ API key లేకపోతే script `topics.yaml` లోని fixed steps న�
 
 ❌ ఎరుపు X వస్తే: run తెరిచి **Make the Short** step లో error screenshot తీసి Claude కి పంపండి.
 
-## Step 3: Claude API key (మంచి scripts కోసం)
+## Step 3a: Gemini API key (FREE, scripts + అనువాదాల కోసం)
+
+1. **aistudio.google.com** తెరిచి మీ Gmail తో login అవ్వండి
+2. ఎడమ వైపు **Get API key** → **Create API key** → project ఎంచుకోండి (ఉదా: `pdfdon-shorts`) → key copy చేయండి
+3. GitHub repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+   - Name: `GEMINI_API_KEY`
+   - Secret: key paste → **Add secret**
+
+Free tier లో పంపే text ని Google తన products మెరుగుపరచడానికి వాడుకుంటుంది. మన video scripts లో personal data ఉండదు కాబట్టి సమస్య లేదు.
+`ANTHROPIC_API_KEY` కూడా ఉంటే bot Claude నే వాడుతుంది. Gemini key ఒక్కటే ఉంటే Gemini వాడుతుంది.
+
+## Step 3b: Claude API key (optional, paid)
 
 1. **console.anthropic.com** లో login అవ్వండి → **Billing** లో credits జోడించండి (Short కి సుమారు ₹5-10, పొడవైన video కి సుమారు ₹15-30 ఖర్చు)
 2. **API Keys** → **Create Key** → name `pdfdon-bot` → key copy చేయండి

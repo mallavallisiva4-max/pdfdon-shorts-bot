@@ -1,4 +1,5 @@
 anthropic
+google-genai
 edge-tts
 gTTS
 playwright

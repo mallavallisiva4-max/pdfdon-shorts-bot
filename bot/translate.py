@@ -5,6 +5,7 @@ import os
 
 import anthropic
 
+from . import gemini
 from .script_writer import MODEL
 
 LANGUAGES = {
@@ -46,15 +47,18 @@ about the free tools on pdfdon.com.
 
 
 def translate(script, narration):
-    """Returns (localizations, english_narration), or (None, None) when Claude is not available."""
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        return None, None
+    """Returns (localizations, english_narration), or (None, None) when no writer is available.
+    Claude when ANTHROPIC_API_KEY is set, otherwise Gemini's free tier."""
     payload = {
         "title": script["title"],
         "description": script["description"],
         "narration_parts": narration,
         "languages": LANGUAGES,
     }
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        data = gemini.ask_json(SYSTEM, json.dumps(payload, ensure_ascii=False), SCHEMA)
+        return _unpack(data, narration) if data else (None, None)
+
     client = anthropic.Anthropic()
     try:
         response = client.beta.messages.create(
@@ -76,7 +80,10 @@ def translate(script, narration):
         print(f"  translation skipped: Claude stopped with {response.stop_reason}")
         return None, None
 
-    data = json.loads(next(b.text for b in response.content if b.type == "text"))
+    return _unpack(json.loads(next(b.text for b in response.content if b.type == "text")), narration)
+
+
+def _unpack(data, narration):
     english = data["english_narration"]
     if len(english) != len(narration):
         print("  English subtitles skipped: the translation has a different number of parts")
