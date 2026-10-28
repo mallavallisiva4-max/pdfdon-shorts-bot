@@ -1,0 +1,83 @@
+name: PDFDon Shorts
+
+on:
+  schedule:
+    # Mon, Wed, Fri at 04:30 UTC = 10:00 AM India time
+    - cron: "30 4 * * 1,3,5"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Test only - make the video, do not upload"
+        type: boolean
+        default: true
+      topic:
+        description: "Topic id from topics.yaml (empty = next topic)"
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: shorts
+  cancel-in-progress: false
+
+jobs:
+  short:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install ffmpeg and Telugu fonts
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ffmpeg fonts-noto-core fonts-noto-color-emoji
+
+      - name: Install Python packages and browser
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Make the Short
+        id: run
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+          TOPIC: ${{ inputs.topic }}
+        run: |
+          if [ "$DRY_RUN" = "true" ]; then
+            python -m bot.main --dry-run --topic "$TOPIC"
+          else
+            python -m bot.main --topic "$TOPIC"
+          fi
+
+      - name: Keep the video for 14 days
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: short
+          path: |
+            out/short.mp4
+            out/thumbnail.png
+            out/script.json
+            out/shots/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Remember the topic
+        if: steps.run.outputs.saved == 'true'
+        run: |
+          git config user.name "pdfdon-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/done.json
+          git commit -m "Short made: ${{ steps.run.outputs.video_id }}"
+          git push
