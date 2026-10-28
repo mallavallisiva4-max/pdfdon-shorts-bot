@@ -1,4 +1,4 @@
-"""Uploads the Short to YouTube as PRIVATE. You check it in YouTube Studio and make it Public."""
+"""Uploads the Short to YouTube (public by default; see bot/main.py for when it stays private)."""
 import os
 
 from google.oauth2.credentials import Credentials
@@ -27,8 +27,8 @@ def _client():
     return build("youtube", "v3", credentials=creds, cache_discovery=False)
 
 
-def upload(video, thumbnail, script):
-    """Returns the new video id."""
+def upload(video, thumbnail, script, privacy="private"):
+    """Returns the new video id. privacy is "public", "unlisted" or "private"."""
     youtube = _client()
     body = {
         "snippet": {
@@ -40,7 +40,7 @@ def upload(video, thumbnail, script):
             "defaultAudioLanguage": "te",
         },
         "status": {
-            "privacyStatus": "private",
+            "privacyStatus": privacy,
             "selfDeclaredMadeForKids": False,
         },
     }
@@ -53,7 +53,7 @@ def upload(video, thumbnail, script):
     while response is None:
         _, response = request.next_chunk()
     video_id = response["id"]
-    print(f"  uploaded (private): https://youtu.be/{video_id}")
+    print(f"  uploaded ({privacy}): https://youtu.be/{video_id}")
 
     try:
         youtube.thumbnails().set(videoId=video_id, media_body=MediaFileUpload(str(thumbnail))).execute()

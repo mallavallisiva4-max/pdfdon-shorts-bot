@@ -16,10 +16,13 @@ RESULT = "a[download], button:has-text('Download'), a:has-text('Download')"
 
 
 def _try(label, fn):
+    """Runs one step; returns False when it failed (a missing element must not stop the video)."""
     try:
         fn()
-    except Exception as e:  # a missing element must not stop the video
+        return True
+    except Exception as e:
         print(f"  capture: {label} skipped ({type(e).__name__}: {str(e).splitlines()[0][:120]})")
+        return False
 
 
 def _visible(locator):
@@ -27,8 +30,11 @@ def _visible(locator):
 
 
 def capture(topic, outdir, assets):
+    """Returns (shots, problems). problems lists the main steps that failed, so the video
+    can be kept private for a human to check."""
     outdir.mkdir(parents=True, exist_ok=True)
     shots = {}
+    problems = []
 
     with sync_playwright() as p:
         browser = p.chromium.launch()
@@ -54,14 +60,16 @@ def capture(topic, outdir, assets):
             for button in _visible(page.get_by_role("button", name=CLOSE)):
                 button.click(timeout=3000)
             page.wait_for_timeout(500)
-        _try("close banner", close_banners)
+        if not _try("close banner", close_banners):
+            problems.append("close banner")
         shot("open")
 
         if topic.get("upload"):
             def upload():
-                page.locator("input[type=file]").first.set_input_files(str(assets / topic["upload"]))
+                page.locator("input[type=file]").first.set_input_files(str(assets / topic["upload"]), timeout=10000)
                 page.wait_for_timeout(2500)
-            _try("upload", upload)
+            if not _try("upload", upload):
+                problems.append("upload")
 
         if topic.get("fill"):
             def fill():
@@ -72,12 +80,15 @@ def capture(topic, outdir, assets):
                     ":not([type=button]):not([type=submit]):not([type=search])"
                     ":not([placeholder*=earch]):not([role=combobox]), textarea"
                 ))
+                if not boxes:
+                    raise LookupError("no input boxes found")
                 for box, value in zip(boxes, topic["fill"]):
                     box.fill(str(value))
                     box.dispatch_event("change")
                 page.keyboard.press("Tab")
                 page.wait_for_timeout(800)
-            _try("fill", fill)
+            if not _try("fill", fill):
+                problems.append("fill")
 
         def show_preview():
             found = _visible(page.locator(PREVIEW))
@@ -108,4 +119,4 @@ def capture(topic, outdir, assets):
         shot("result")
 
         browser.close()
-    return shots
+    return shots, problems

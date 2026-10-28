@@ -70,7 +70,7 @@ def main():
     clips = voice.synthesize([script[p]["narration"] for p in script_writer.PARTS], OUT / "audio")
 
     print("3/5 screenshots")
-    shots = capture.capture(topic, OUT / "shots", ROOT / "assets")
+    shots, problems = capture.capture(topic, OUT / "shots", ROOT / "assets")
 
     print("4/5 video")
     video, thumb = render.build(script, shots, clips, OUT, ROOT / "assets", topic["te_name"])
@@ -82,12 +82,22 @@ def main():
 
     video_id = None
     if youtube_upload.configured():
-        print("5/5 upload")
-        video_id = youtube_upload.upload(video, thumb, script)
-        summary(
-            f"### Uploaded as PRIVATE: {script['title']}\n"
-            f"Check it, then make it Public: https://studio.youtube.com/video/{video_id}/edit"
-        )
+        # Public by default; private when a main step on the site failed, so a human looks first.
+        privacy = os.environ.get("YT_PRIVACY", "public")
+        if problems:
+            privacy = "private"
+            print(f"  steps failed on the site ({', '.join(problems)}) - uploading as private")
+        print(f"5/5 upload ({privacy})")
+        video_id = youtube_upload.upload(video, thumb, script, privacy)
+        studio = f"https://studio.youtube.com/video/{video_id}/edit"
+        if privacy == "public":
+            summary(f"### Published: {script['title']}\nhttps://youtu.be/{video_id} · Studio: {studio}")
+        else:
+            reason = f" (failed steps: {', '.join(problems)})" if problems else ""
+            summary(
+                f"### Uploaded as PRIVATE{reason}: {script['title']}\n"
+                f"Check it, then make it Public: {studio}"
+            )
     else:
         print("5/5 YouTube secrets not set - video kept as the 'short' artifact for manual upload.")
         summary(
