@@ -1,0 +1,193 @@
+# One entry per pdfdon.com tool. The bot picks the tool with the fewest
+# uploaded videos (ties go to the one higher in this list).
+#
+#   path    : page on https://www.pdfdon.com
+#   upload  : sample file from assets/ to put into the page's file input (optional)
+#   fill    : sample values typed into the page's visible inputs, in order (optional)
+#   te_name : how the tool is called in the video
+#   hook    : 2-3 big words for the first screen and thumbnail (template script only)
+#   facts   : what the tool really does - Claude only talks about these, nothing invented
+#   steps   : 3 short Telugu steps, used as-is when no ANTHROPIC_API_KEY is set
+
+topics:
+  - id: photo-signature-resizer
+    path: /tools/photo-signature-resizer/
+    upload: sample-photo.jpg
+    te_name: "Exam Form Photo & Signature Resize"
+    hook: "PHOTO 20KB"
+    facts: >
+      Resizes a photo or signature to the exact KB size and pixel size that exam and job
+      application forms ask for (for example 20KB-50KB photo, 10KB-20KB signature).
+      Works in the mobile browser, free, no login, files stay on the phone.
+    steps:
+      - "pdfdon.com లో Photo & Signature Resizer తెరవండి"
+      - "మీ photo select చేసి, form అడిగిన KB size ఇవ్వండి"
+      - "Resize చేసి Download చేయండి, form లో upload చేయండి"
+
+  - id: passport-photo-sheet
+    path: /tools/passport-photo-sheet/
+    upload: sample-photo.jpg
+    te_name: "Passport Size Photo Sheet"
+    hook: "PASSPORT PHOTO"
+    facts: >
+      Makes a printable sheet of passport size photos from one photo, so you can print
+      many copies on one page at home or at a shop. Free, no login.
+    steps:
+      - "pdfdon.com లో Passport Photo Sheet Maker తెరవండి"
+      - "మీ photo upload చేసి, ఎన్ని copies కావాలో ఎంచుకోండి"
+      - "Sheet download చేసి print తీసుకోండి"
+
+  - id: background-remover
+    path: /tools/background-remover/
+    upload: sample-photo.jpg
+    te_name: "Photo Background Remove"
+    hook: "BACKGROUND REMOVE"
+    facts: >
+      Removes the background of a photo in the browser, so you can put a plain white
+      background for forms, ID cards or profile pictures. Free, no login.
+    steps:
+      - "pdfdon.com లో Background Remover తెరవండి"
+      - "మీ photo select చేయండి, background దానంతట అదే పోతుంది"
+      - "కొత్త photo download చేసుకోండి"
+
+  - id: document-scanner-pdf
+    path: /tools/document-scanner-pdf/
+    upload: sample-photo.jpg
+    te_name: "Mobile Document Scanner to PDF"
+    hook: "SCAN TO PDF"
+    facts: >
+      Turns photos of documents taken with the phone camera into a clean PDF file.
+      Several pages can go into one PDF. Free, no login.
+    steps:
+      - "pdfdon.com లో Document Scanner తెరవండి"
+      - "Document photos తీయండి లేదా gallery నుండి select చేయండి"
+      - "ఒకే PDF గా download చేయండి"
+
+  - id: resume-maker
+    path: /tools/resume-maker/
+    fill: ["Ravi Kumar", "ravi@example.com", "9876543210"]
+    te_name: "Free Resume Maker"
+    hook: "FREE RESUME"
+    facts: >
+      Fill in your details and get a ready resume to download or print. Good for freshers
+      and job applications. Free, no login, no watermark.
+    steps:
+      - "pdfdon.com లో Resume Maker తెరవండి"
+      - "మీ పేరు, phone, చదువు, skills నింపండి"
+      - "Resume download చేసి print లేదా share చేయండి"
+
+  - id: gst-calculator
+    path: /tools/gst-calculator/
+    fill: ["10000", "18"]
+    te_name: "GST Calculator"
+    hook: "GST 18%?"
+    facts: >
+      Calculates GST amount and total price for an amount and GST rate (5%, 12%, 18%, 28%),
+      both adding GST and removing GST from a price. Useful for shops and small businesses.
+    steps:
+      - "pdfdon.com లో GST Calculator తెరవండి"
+      - "Amount మరియు GST rate ఎంటర్ చేయండి"
+      - "GST amount, total వెంటనే కనిపిస్తాయి"
+
+  - id: loan-calculator
+    path: /tools/loan-calculator/
+    fill: ["500000", "9", "5"]
+    te_name: "Loan EMI Calculator"
+    hook: "EMI ఎంత?"
+    facts: >
+      Calculates monthly EMI, total interest and total payment for a loan amount,
+      interest rate and tenure. Useful before taking a home, bike or personal loan.
+    steps:
+      - "pdfdon.com లో Loan EMI Calculator తెరవండి"
+      - "Loan amount, interest rate, years ఎంటర్ చేయండి"
+      - "నెల EMI, మొత్తం interest చూడండి"
+
+  - id: text-on-photo
+    path: /tools/text-on-photo/
+    upload: sample-photo.jpg
+    fill: ["Ravi Kumar", "28-10-2026"]
+    te_name: "Photo మీద Name & Date"
+    hook: "NAME + DATE"
+    facts: >
+      Adds name and date (or any text) on a photo, as many exam forms ask for a photo
+      with name and date printed below. Free, no login.
+    steps:
+      - "pdfdon.com లో Name and Date on Photo తెరవండి"
+      - "Photo select చేసి, మీ పేరు మరియు date type చేయండి"
+      - "కొత్త photo download చేయండి"
+
+  - id: typing-speed-test
+    path: /tools/typing-speed-test/
+    te_name: "Telugu Typing Speed Test"
+    hook: "TYPING TEST"
+    facts: >
+      Typing speed test in English, Hindi and Telugu that shows words per minute and
+      accuracy. Good practice for government job typing tests.
+    steps:
+      - "pdfdon.com లో Typing Speed Test తెరవండి"
+      - "Telugu, English లేదా Hindi భాష ఎంచుకోండి"
+      - "Type చేసి మీ WPM, accuracy చూసుకోండి"
+
+  - id: age-calculator
+    path: /tools/age-calculator/
+    te_name: "Age Calculator"
+    hook: "EXACT AGE"
+    facts: >
+      Calculates exact age in years, months and days from date of birth, for example to
+      check age limits in job notifications on a given date.
+    steps:
+      - "pdfdon.com లో Age Calculator తెరవండి"
+      - "మీ పుట్టిన తేదీ ఎంటర్ చేయండి"
+      - "Years, months, days లో exact age చూడండి"
+
+  - id: photo-border-maker
+    path: /tools/photo-border-maker/
+    upload: sample-photo.jpg
+    te_name: "Photo Border Maker"
+    hook: "PHOTO BORDER"
+    facts: >
+      Adds a border to a photo, for example the thin black border some forms and ID cards
+      need, or a colour frame for sharing. Free, no login.
+    steps:
+      - "pdfdon.com లో Photo Border Maker తెరవండి"
+      - "Photo select చేసి border size, colour ఎంచుకోండి"
+      - "Border ఉన్న photo download చేయండి"
+
+  - id: invoice-maker
+    path: /tools/invoice-maker/
+    fill: ["Sri Sai Stores", "Customer Name"]
+    te_name: "Free Invoice / Bill Maker"
+    hook: "FREE BILL"
+    facts: >
+      Makes a professional invoice or bill for a shop or small business, with items,
+      quantity, price and total, ready to download or print. Free, no login, no watermark.
+    steps:
+      - "pdfdon.com లో Invoice Maker తెరవండి"
+      - "Shop పేరు, customer, items, prices నింపండి"
+      - "Invoice download చేసి print లేదా WhatsApp చేయండి"
+
+  - id: marriage-biodata-maker
+    path: /tools/marriage-biodata-maker/
+    fill: ["Ravi Kumar"]
+    te_name: "Marriage Biodata Maker"
+    hook: "BIODATA"
+    facts: >
+      Makes a neat marriage biodata with photo, personal, family and contact details,
+      ready to download and share. Free, no login.
+    steps:
+      - "pdfdon.com లో Marriage Biodata Maker తెరవండి"
+      - "వివరాలు నింపి photo జోడించండి"
+      - "Biodata download చేసి share చేయండి"
+
+  - id: black-and-white
+    path: /tools/black-and-white/
+    upload: sample-photo.jpg
+    te_name: "Photo Black & White"
+    hook: "BLACK & WHITE"
+    facts: >
+      Converts a colour photo to black and white in one tap, for forms or prints that
+      need a black and white photo. Free, no login.
+    steps:
+      - "pdfdon.com లో Black and White tool తెరవండి"
+      - "మీ photo select చేయండి"
+      - "Black & white photo download చేయండి"

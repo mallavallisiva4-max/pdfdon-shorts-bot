@@ -1,0 +1,6 @@
+anthropic
+edge-tts
+playwright
+pyyaml
+google-api-python-client
+google-auth
