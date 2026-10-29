@@ -18,7 +18,9 @@ def ask_json(system, prompt, schema):
     """Returns the parsed JSON answer, or None when Gemini is not set up or did not answer."""
     if not configured():
         return None
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    # Give up on a call after 3 minutes instead of waiting forever.
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"],
+                          http_options=types.HttpOptions(timeout=180_000))
     config = types.GenerateContentConfig(
         system_instruction=system,
         response_mime_type="application/json",

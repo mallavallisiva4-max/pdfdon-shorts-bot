@@ -131,6 +131,7 @@ def write(topic, previous_titles):
     if script is None:
         print("  using the fixed template script.")
         return template(topic)
+    trim(script, {part: SHORT_WORDS for part in PARTS})
     return script
 
 
@@ -206,10 +207,37 @@ Rules:
 
 
 def write_long(topic, previous_titles):
-    """Long tutorial script, or None: a long video needs Claude (there is no fixed template)."""
-    return _ask(LONG_SYSTEM,
-                _prompt(topic, previous_titles, "Write the script for the next full tutorial video about this tool."),
-                LONG_SCHEMA, SITE + topic["path"])
+    """Long tutorial script, or None: a long video needs Claude or Gemini (there is no fixed template)."""
+    script = _ask(LONG_SYSTEM,
+                  _prompt(topic, previous_titles, "Write the script for the next full tutorial video about this tool."),
+                  LONG_SCHEMA, SITE + topic["path"])
+    if script is not None:
+        trim(script, LONG_WORDS)
+    return script
+
+
+# Most words a part may have: about twice what the prompt asks for. A runaway answer would
+# otherwise turn into an hours-long recording.
+LONG_WORDS = {"intro": 100, "home": 140, "search": 100, "open": 240, "action": 440,
+              "result": 320, "more": 320, "outro": 120}
+SHORT_WORDS = 40
+
+
+def _cut(text, limit):
+    words = text.split()
+    if len(words) <= limit:
+        return text
+    kept = " ".join(words[:limit])
+    end = max(kept.rfind(c) for c in ".!?।")
+    return kept[:end + 1] if end > len(kept) // 2 else kept
+
+
+def trim(script, limits):
+    for part, limit in limits.items():
+        before = len(script[part]["narration"].split())
+        script[part]["narration"] = _cut(script[part]["narration"], limit)
+        if before > limit:
+            print(f"  {part}: narration cut from {before} to {len(script[part]['narration'].split())} words")
 
 
 def template(topic):
