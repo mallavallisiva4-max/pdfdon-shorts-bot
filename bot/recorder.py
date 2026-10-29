@@ -171,22 +171,33 @@ def scene_search(s, end):
         term = " ".join(words[:3]) or term
 
     def search():
-        # The main "Search tools and guides" box first, the sidebar filter only as a fallback.
-        box = (s.visible(s.page.locator("input[placeholder*='Search']"))
+        # The sidebar "Find a tool" filter: wide, and it narrows the list to the one tool. The
+        # header box is only ~100px wide on a laptop screen, so it is just the fallback.
+        box = (s.visible(s.page.locator("input[placeholder^='Find a tool']"))
                or s.visible(s.page.locator(SEARCH)))[0]
         s.tap(box)
         box.press_sequentially(term, delay=120)
-        s.wait(1.5)
-        link = s.page.locator(f"a[href*='{s.topic['path'].rstrip('/')}']")
-        if s.visible(link):
-            s.cursor_to(s.visible(link)[0])
+        s.wait(1.2)
+        found = s.visible(s.page.locator(f"a[href*='{s.topic['path'].rstrip('/')}']"))
+        if not found:
+            return
+        s.cursor_to(found[0])
+        # Point at the result while the narration talks, then open it like a person would.
+        s.wait(max(0, end - s.now() - 2.0))
+        s.tap(found[0])
+        s.page.wait_for_load_state("networkidle", timeout=20000)
     s.attempt("search", search)
-    s.idle(end)
+    s.wait(max(0, end - s.now()))
 
 
 def scene_open(s, end):
     if s.topic["path"].rstrip("/") not in s.page.url:
         s.goto(SITE + s.topic["path"])
+    else:
+        # Opened from the search result: close the banner here too.
+        s.attempt("close banner", lambda: [b.click(timeout=3000) for b in
+                                           s.visible(s.page.get_by_role("button", name=CLOSE))],
+                  important=True)
     s.page.evaluate("window.__cursorTo(innerWidth / 2, innerHeight / 3)")
     s.wait(1.5)
     s.shot("open")

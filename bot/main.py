@@ -11,10 +11,11 @@ import json
 import os
 import pathlib
 import shutil
+import subprocess
 
 import yaml
 
-from . import captions, recorder, render, script_writer, translate, voice, youtube_upload
+from . import captions, instagram, recorder, render, script_writer, translate, voice, youtube_upload
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 STATE = ROOT / "state" / "done.json"
@@ -152,6 +153,20 @@ def main():
             f"### Ready to upload by hand: {script['title']}\n"
             "Download the **video** artifact below. Title, description and tags are in script.json."
         )
+
+    # Shorts also go to Instagram as Reels, but only when nothing failed on the site:
+    # a Reel is public at once and there is no private step to check it first.
+    if kind == "short" and instagram.configured():
+        if problems:
+            print("  Instagram skipped: the video has problems")
+        else:
+            print("Instagram Reel")
+            try:
+                link = instagram.publish(video, script)
+                summary(f"### Instagram Reel posted\n{link}")
+            except (RuntimeError, OSError, subprocess.CalledProcessError) as e:
+                print(f"  Instagram failed: {e}")
+                summary(f"### Instagram Reel failed\n{e}")
 
     # Remember the topic either way, so the next run moves on to a new one.
     done.append({
