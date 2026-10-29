@@ -142,6 +142,27 @@ Subtitles upload చేయడానికి YouTube కి ఇంకో permiss
 
 **Audio dubbing (voice వేరే భాషలో):** ఇది bot చేయలేదు. YouTube Studio → **Settings → Upload defaults → Advanced settings** లో **automatic dubbing** option కనిపిస్తే on చేయండి. ఆ option అన్ని channels కి, అన్ని భాషలకు ఇంకా రాలేదు.
 
+## Step 6: Instagram Reels (Shorts దానంతట అదే Instagram లో)
+
+Short YouTube లో Public అయ్యాక, అదే video Instagram లో **Reel** గా post అవుతుంది. Site లో ఏదైనా step తప్పిన video Instagram కి వెళ్ళదు.
+
+### 6a. Repo ని Public చేయడం
+Instagram video ని public link నుండి తీసుకుంటుంది. Bot video ని కాసేపు GitHub Release లో పెట్టి, Instagram తీసుకున్నాక delete చేస్తుంది.
+1. Repo → **Settings** → **General** → కిందికి scroll → **Danger Zone** → **Change visibility** → **Make public** → confirm
+2. Secrets (keys) public కావు. Code మాత్రమే అందరికీ కనిపిస్తుంది. `clientid.txt` లాంటి files repo లో **లేవని** ముందే check చేయండి
+
+### 6b. Meta (Instagram) app, token
+1. **developers.facebook.com** → మీ Facebook తో login → **My Apps** → **Create App**
+2. Use case: **Manage messaging & content on Instagram** → app name `PDFDon Reels Bot` → **Create**
+3. App dashboard → **Instagram** → **API setup with Instagram login**
+4. **Generate access tokens** → **Add account** → PDFDon Instagram account తో login → **Allow**
+5. అక్కడ కనిపించే **Instagram User ID** (అంకెలు) మరియు **Generate token** నొక్కితే వచ్చే **access token** copy చేయండి
+6. GitHub → Settings → Secrets → Actions → **New repository secret**:
+   - `IG_USER_ID` → User ID
+   - `IG_ACCESS_TOKEN` → token
+
+Token 60 రోజులు పని చేస్తుంది. Bot ప్రతి run లో దాన్ని refresh చేస్తుంది. Log లో "Instagram returned a new token" అని వస్తే, కొత్త token ని `IG_ACCESS_TOKEN` లో పెట్టండి.
+
 ## మార్పులు చేయడం
 
 | ఏమి మార్చాలి | ఎక్కడ |
