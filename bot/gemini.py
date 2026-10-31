@@ -2,12 +2,16 @@
 Get a free key at aistudio.google.com and save it as the GEMINI_API_KEY secret."""
 import json
 import os
+import time
 
 from google import genai
 from google.genai import errors, types
 
-# Tried in order; a busy or retired model falls through to the next one.
-MODELS = [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.8-flash", "gemini-2.5-flash"] if m]
+# Free-tier models, tried in order; a busy or retired model falls through to the next one.
+MODELS = [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.8-flash", "gemini-3.6-flash",
+                      "gemini-3.5-flash-lite"] if m]
+BUSY = (429, 500, 503)  # worth waiting for: rate limit or "high demand"
+TRIES = 3
 
 
 def configured():
@@ -28,15 +32,20 @@ def ask_json(system, prompt, schema):
         max_output_tokens=32000,
     )
     for model in MODELS:
-        try:
-            response = client.models.generate_content(model=model, contents=prompt, config=config)
-            if not response.text:
-                print(f"  Gemini {model} gave an empty answer")
-                continue
-            print(f"  written by Gemini ({model})")
-            return json.loads(response.text)
-        except errors.APIError as e:
-            print(f"  Gemini {model} error {e.code}: {str(e.message)[:200]}")
-        except json.JSONDecodeError:
-            print(f"  Gemini {model} answer was not valid JSON")
+        for attempt in range(1, TRIES + 1):
+            try:
+                response = client.models.generate_content(model=model, contents=prompt, config=config)
+                if not response.text:
+                    print(f"  Gemini {model} gave an empty answer")
+                    break
+                print(f"  written by Gemini ({model})")
+                return json.loads(response.text)
+            except errors.APIError as e:
+                print(f"  Gemini {model} error {e.code} (try {attempt}): {str(e.message)[:160]}")
+                if e.code not in BUSY or attempt == TRIES:
+                    break  # retired, bad request or still busy: next model
+                time.sleep(20 * attempt)
+            except json.JSONDecodeError:
+                print(f"  Gemini {model} answer was not valid JSON")
+                break
     return None
