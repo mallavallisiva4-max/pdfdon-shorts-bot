@@ -93,7 +93,7 @@ jobs:
         run: |
           git config user.name "pdfdon-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git pull --rebase -q
           git add state/done.json
           git commit -m "Video made: ${{ steps.run.outputs.video_id }}"
+          git pull --rebase -q
           git push
