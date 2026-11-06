@@ -65,7 +65,7 @@ topics:
 
   - id: resume-maker
     path: /tools/resume-maker/
-    fill: ["Ravi Kumar", "ravi@example.com", "9876543210"]
+    fill: ["Ravi Kumar", "Junior Accountant", "9876543210", "ravi@example.com"]
     te_name: "Free Resume Maker"
     hook: "FREE RESUME"
     facts: >
