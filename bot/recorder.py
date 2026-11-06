@@ -21,11 +21,12 @@ CLOSE = re.compile(r"^(close|dismiss|×|✕|x)$|close (banner|announcement|notic
 PREVIEW = "canvas, img[src^='blob:'], img[src^='data:']"
 RESULT = "a[download], button:has-text('Download'), a:has-text('Download')"
 SEARCH = "input[type=search], input[placeholder*=earch]"
-FORM_INPUTS = (
-    "input:not([type=file]):not([type=hidden]):not([type=checkbox]):not([type=radio])"
-    ":not([type=button]):not([type=submit]):not([type=search])"
-    ":not([placeholder*=earch]):not([role=combobox]), textarea"
-)
+# Only boxes a person types into. Colour pickers, sliders and date pickers are left alone:
+# typing into them fails, and several tools (resume, biodata, border) start with a colour picker.
+FORM_INPUTS = ", ".join(
+    f"input[type={t}]:not([placeholder*=earch]):not([role=combobox])"
+    for t in ("text", "email", "tel", "number", "url")
+) + ", input:not([type]):not([placeholder*=earch]), textarea"
 
 LAYOUTS = {
     # Shorts: a phone. Long videos: a 1280x720 laptop screen.
@@ -232,11 +233,18 @@ def scene_action(s, end):
             boxes = s.visible(area.locator(FORM_INPUTS))
             if not boxes:
                 raise LookupError("no input boxes found")
+            filled = 0
             for box, value in zip(boxes, topic["fill"]):
-                s.tap(box)
-                box.fill("")
-                box.press_sequentially(str(value), delay=110)
+                try:  # one stubborn box must not spoil the others
+                    s.tap(box)
+                    box.fill("")
+                    box.press_sequentially(str(value), delay=110)
+                    filled += 1
+                except Exception as e:
+                    print(f"  record: one box skipped ({type(e).__name__})")
                 s.wait(0.4)
+            if not filled:
+                raise LookupError("could not type into any box")
             s.page.keyboard.press("Tab")
             s.wait(0.8)
         s.attempt("fill", fill, important=True)
