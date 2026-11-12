@@ -1,0 +1,41 @@
+name: Repost Reel
+
+# Posts the Short of an earlier "PDFDon Shorts" run to Instagram again.
+# Run id = the number at the end of that run's address: .../actions/runs/<run id>
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Run id of the PDFDon Shorts run whose Short should go to Instagram"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  reel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Get the video from that run
+        uses: actions/download-artifact@v4
+        with:
+          name: video
+          path: out
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Post the Reel
+        env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          PYTHONUNBUFFERED: "1"
+        run: python -m bot.repost out
