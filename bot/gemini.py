@@ -10,8 +10,10 @@ from google.genai import errors, types
 # Free-tier models, tried in order; a busy or retired model falls through to the next one.
 MODELS = [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.8-flash", "gemini-3.6-flash",
                       "gemini-3.5-flash-lite"] if m]
-BUSY = (429, 500, 503)  # worth waiting for: rate limit or "high demand"
+BUSY = (429, 500, 503, 504)  # worth waiting for: rate limit, "high demand", timeout
 TRIES = 3
+ROUNDS = 3          # when every model is busy, wait and go through the list again
+ROUND_WAIT = 150    # seconds between rounds
 
 
 def configured():
@@ -31,21 +33,30 @@ def ask_json(system, prompt, schema):
         response_json_schema=schema,
         max_output_tokens=32000,
     )
-    for model in MODELS:
-        for attempt in range(1, TRIES + 1):
-            try:
-                response = client.models.generate_content(model=model, contents=prompt, config=config)
-                if not response.text:
-                    print(f"  Gemini {model} gave an empty answer")
+    for round_ in range(1, ROUNDS + 1):
+        busy = False
+        for model in MODELS:
+            for attempt in range(1, TRIES + 1):
+                try:
+                    response = client.models.generate_content(model=model, contents=prompt, config=config)
+                    if not response.text:
+                        print(f"  Gemini {model} gave an empty answer")
+                        break
+                    print(f"  written by Gemini ({model})")
+                    return json.loads(response.text)
+                except errors.APIError as e:
+                    print(f"  Gemini {model} error {e.code} (try {attempt}): {str(e.message)[:160]}")
+                    if e.code not in BUSY:
+                        break  # retired or bad request: next model
+                    busy = True
+                    if attempt == TRIES:
+                        break
+                    time.sleep(20 * attempt)
+                except json.JSONDecodeError:
+                    print(f"  Gemini {model} answer was not valid JSON")
                     break
-                print(f"  written by Gemini ({model})")
-                return json.loads(response.text)
-            except errors.APIError as e:
-                print(f"  Gemini {model} error {e.code} (try {attempt}): {str(e.message)[:160]}")
-                if e.code not in BUSY or attempt == TRIES:
-                    break  # retired, bad request or still busy: next model
-                time.sleep(20 * attempt)
-            except json.JSONDecodeError:
-                print(f"  Gemini {model} answer was not valid JSON")
-                break
+        if not busy or round_ == ROUNDS:
+            break
+        print(f"  all Gemini models busy - waiting {ROUND_WAIT}s (round {round_} of {ROUNDS})")
+        time.sleep(ROUND_WAIT)
     return None

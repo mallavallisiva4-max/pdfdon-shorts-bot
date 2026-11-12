@@ -28,7 +28,9 @@ SCENES = {
              "action": "action", "result": "result", "more": "more"},
 }
 PARTS = {"short": script_writer.PARTS, "long": script_writer.LONG_PARTS}
-MIN_LONG_SECONDS = 180
+# A long video shorter than this means the script came out far too short; keep it private.
+# (Gemini's lighter models write ~2.5 minute scripts, which are fine to publish.)
+MIN_LONG_SECONDS = 100
 
 
 def pick_topic(topics, done, forced):
