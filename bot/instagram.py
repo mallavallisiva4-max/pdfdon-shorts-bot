@@ -79,7 +79,8 @@ def _container_direct(token, user, video, text):
     body = video.read_bytes()
     req = urllib.request.Request(
         f"https://rupload.facebook.com/ig-api-upload/{API_VERSION}/{container}", data=body, method="POST",
-        headers={"Authorization": f"OAuth {token}", "offset": "0", "file_size": str(len(body))})
+        headers={"Authorization": f"OAuth {token}", "offset": "0", "file_size": str(len(body)),
+                 "Content-Type": "application/octet-stream"})
     _send(req)
     return container, None
 
@@ -110,8 +111,17 @@ def publish(video, script):
     """Returns the Reel's permalink. Raises RuntimeError when Instagram refuses it."""
     token = _refresh(os.environ["IG_ACCESS_TOKEN"])
     user = os.environ["IG_USER_ID"]
-    make = _container_hosted if _instagram_login(token) else _container_direct
-    container, tag = make(token, user, video, caption(script))
+    text = caption(script)
+    if _instagram_login(token):
+        container, tag = _container_hosted(token, user, video, text)
+    else:
+        try:
+            container, tag = _container_direct(token, user, video, text)
+        except RuntimeError as e:
+            # Instagram sometimes refuses the direct upload ("ProcessingFailedError");
+            # then let it fetch the file from a public link instead.
+            print(f"  direct upload refused ({str(e)[:160]}) - using a public link instead")
+            container, tag = _container_hosted(token, user, video, text)
     try:
         # Instagram processes the video; check every 15 seconds for up to 10 minutes.
         for _ in range(40):
