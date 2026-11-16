@@ -33,6 +33,38 @@ PARTS = {"short": script_writer.PARTS, "long": script_writer.LONG_PARTS}
 MIN_LONG_SECONDS = 100
 
 
+# The pdfdon.com article or guide that explains each tool in depth; linked under the tool link in
+# every video description so viewers (and Google) find the site's written guides.
+GUIDES = {
+    "photo-signature-resizer": "/guides/exam-photo-signature-upload-telugu.html",
+    "passport-photo-sheet": "/guides/passport-photo-size-guide.html",
+    "background-remover": "/guides/background-remover.html",
+    "document-scanner-pdf": "/guides/scan-documents-with-phone.html",
+    "resume-maker": "/guides/fresher-resume-guide-telugu.html",
+    "gst-calculator": "/guides/gst-bill-small-shops-telugu.html",
+    "loan-calculator": "/guides/loan-emi-explained.html",
+    "text-on-photo": "/guides/exam-photo-signature-upload-telugu.html",
+    "typing-speed-test": "/guides/typing-practice-telugu.html",
+    "age-calculator": "/guides/age-calculator.html",
+    "photo-border-maker": "/guides/photo-border-maker.html",
+    "invoice-maker": "/guides/gst-bill-small-shops-telugu.html",
+    "marriage-biodata-maker": "/guides/marriage-biodata-maker.html",
+    "black-and-white": "/guides/black-and-white.html",
+}
+
+
+def add_guide_link(script, topic_id):
+    """Puts the guide link right under the first line (the tool link) of the description."""
+    path = GUIDES.get(topic_id)
+    if not path:
+        return
+    link = f"📖 పూర్తి గైడ్: https://www.pdfdon.com{path}"
+    if link in script["description"]:
+        return
+    first, _, rest = script["description"].partition("\n")
+    script["description"] = f"{first}\n{link}\n{rest}"
+
+
 def pick_topic(topics, done, forced):
     if forced:
         for t in topics:
@@ -87,6 +119,7 @@ def main():
             print(msg)
             summary(f"### Long video skipped\n{msg}")
             return
+    add_guide_link(script, topic["id"])
     (OUT / "script.json").write_text(json.dumps(script, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"  title: {script['title']}")
 
