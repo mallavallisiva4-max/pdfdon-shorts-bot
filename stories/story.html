@@ -95,6 +95,7 @@
     border: 3px solid rgba(255,209,102,.6); }
   #who { display: inline-block; font-size: 24px; font-weight: 800; padding: 4px 18px; border-radius: 30px; margin-bottom: 10px; color: #1b1b1b; }
   #who.father { background: #ffb347; } #who.cub { background: #ffd8a8; }
+  #who.owl { background: #d9c2a0; } #who.hero { background: #9be7a5; }
 </style>
 </head>
 <body>
@@ -323,7 +324,7 @@ function counterText(c, p) {
   return v + ' WPM' + (p >= 1 ? ' ✅' : '');
 }
 
-const WHO = { father: 'నాన్న సింహం', cub: 'పిల్ల సింహం' };
+const WHO = { father: 'నాన్న సింహం', cub: 'పిల్ల సింహం', owl: 'గుడ్లగూబ తాత' };
 window.start = (T, ep) => {
   setup(ep);
   document.getElementById('stage').classList.add('on');
@@ -334,11 +335,14 @@ window.start = (T, ep) => {
     for (const l of T.lines) if (t >= l.start - 0.3) cur = l;
     const speaking = T.lines.find(l => t >= l.start && t <= l.end);
     document.querySelectorAll('.scene').forEach(s => s.classList.toggle('show', s.dataset.scene === cur.scene));
-    const who = document.getElementById('who'); who.textContent = WHO[cur.who]; who.className = cur.who;
+    const who = document.getElementById('who');
+    who.textContent = cur.who === 'hero' ? ep.hero_name : WHO[cur.who]; who.className = cur.who;
     document.getElementById('line').textContent = cur.text;
-    document.getElementById('father').classList.toggle('talk', !!(speaking && speaking.who === 'father' && cur.scene === 'night'));
-    document.getElementById('cub').classList.toggle('talk', !!(speaking && speaking.who === 'cub'));
-    document.getElementById('owl').classList.toggle('talk', !!(speaking && cur.scene === 'owl'));
+    const says = w => !!(speaking && speaking.who === w);
+    document.getElementById('father').classList.toggle('talk', says('father') && cur.scene === 'night');
+    document.getElementById('cub').classList.toggle('talk', says('cub'));
+    document.getElementById('owl').classList.toggle('talk', says('owl'));
+    document.querySelectorAll('.char.hero').forEach(h => h.classList.toggle('talk', says('hero')));
     if (cur.scene === 'tools') {
       const p = Math.min(1, Math.max(0, (t - cur.start - 0.8) / 3));
       document.getElementById('counter').textContent = counterText(ep.counter, p);
