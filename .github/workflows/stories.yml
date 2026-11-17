@@ -1,0 +1,86 @@
+name: Lion Stories
+
+# "సింహం నాన్న కథలు" - one animated animal story Short every evening.
+on:
+  schedule:
+    - cron: "30 13 * * *"   # 13:30 UTC = 7:00 PM India time, every day
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Test only - make the video, do not upload"
+        type: boolean
+        default: true
+      episode:
+        description: "Episode id from stories/episodes.json (empty = next one)"
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: shorts
+  cancel-in-progress: false
+
+jobs:
+  story:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install ffmpeg and Telugu fonts
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ffmpeg fonts-noto-core fonts-noto-color-emoji
+
+      - name: Install Python packages and browser
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Make and upload the story
+        id: run
+        env:
+          PYTHONUNBUFFERED: "1"
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+          EPISODE: ${{ inputs.episode }}
+        run: |
+          if [ "$DRY_RUN" = "true" ]; then
+            python -m bot.story --dry-run --id "$EPISODE"
+          else
+            python -m bot.story --id "$EPISODE"
+          fi
+
+      - name: Keep the video for 14 days
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: story
+          path: |
+            out_story/short.mp4
+            out_story/thumb.png
+            out_story/script.json
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Remember the episode
+        if: steps.run.outputs.saved == 'true'
+        run: |
+          git config user.name "pdfdon-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/stories_done.json
+          git commit -m "Story uploaded: ${{ steps.run.outputs.video_id }}"
+          git pull --rebase -q
+          git push
