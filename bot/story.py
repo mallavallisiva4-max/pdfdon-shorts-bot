@@ -25,8 +25,32 @@ OUT = ROOT / "out_story"
 VOICES = {
     "father": dict(voice="te-IN-MohanNeural", rate="-8%", pitch="-6Hz"),
     "cub": dict(voice="te-IN-ShrutiNeural", rate="+5%", pitch="+30Hz"),
+    "owl": dict(voice="te-IN-MohanNeural", rate="-14%", pitch="-20Hz"),        # old grandpa
+    "hero-male": dict(voice="te-IN-MohanNeural", rate="+8%", pitch="+22Hz"),
+    "hero-female": dict(voice="te-IN-ShrutiNeural", rate="+0%", pitch="+8Hz"),
 }
 GAP = 0.45
+SFX = STORIES / "sfx"
+# background sound for each scene: (file, volume)
+BEDS = {
+    "night": [("crickets", 0.30), ("lullaby", 0.13)],
+    "owl": [("crickets", 0.30), ("lullaby", 0.10)],
+    "hero": [("birds", 0.28), ("lullaby", 0.08)],
+    "error": [("birds", 0.20)],
+    "tools": [("lullaby", 0.14)],
+    "free": [("lullaby", 0.14)],
+    "success": [("birds", 0.28), ("lullaby", 0.10)],
+    "end": [("crickets", 0.30), ("lullaby", 0.16)],
+}
+# one-off sounds, seconds after the scene starts (these match the animations in story.html)
+HITS = {
+    "error": [("buzz", 1.0, 0.45)],
+    "owl": [("hoot", 0.1, 0.55)],
+    "tools": [("pop", 0.0, 0.5), ("pop", 1.4, 0.5), ("pop", 2.6, 0.5), ("ding", 3.8, 0.45)],
+    "free": [("pop", 0.0, 0.5), ("pop", 1.4, 0.5), ("pop", 3.0, 0.5)],
+    "success": [("tada", 0.1, 0.5), ("sparkle", 0.4, 0.4)],
+    "end": [("snore", 1.2, 0.35)],
+}
 
 
 def _duration(path):
@@ -41,9 +65,10 @@ async def _voices(ep):
     lines, t = [], 0.6
     for i, (scene, who, text) in enumerate(ep["lines"]):
         f = clips / f"{i:02d}.mp3"
+        voice = VOICES[f"hero-{ep.get('hero_voice', 'male')}" if who == "hero" else who]
         for attempt in range(3):
             try:
-                await edge_tts.Communicate(text, **VOICES[who]).save(str(f))
+                await edge_tts.Communicate(text, **voice).save(str(f))
                 break
             except Exception as e:  # Edge TTS sometimes drops a request
                 print(f"  voice retry {attempt + 1}: {e}")
@@ -63,7 +88,54 @@ async def _voices(ep):
     filters.append(f"{mix}amix=inputs={len(lines)}:normalize=0,apad=whole_dur={total}[out]")
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *inputs, "-filter_complex", ";".join(filters),
                     "-map", "[out]", "-t", str(total), str(OUT / "voice.mp3")], check=True)
-    return {"total": total, "lines": lines}
+    timeline = {"total": total, "lines": lines}
+    _mix_sounds(timeline)
+    return timeline
+
+
+def _segments(timeline):
+    """Scene blocks as the page shows them: a scene starts 0.3 s before its first line."""
+    segs = []
+    for line in timeline["lines"]:
+        start = max(0.0, line["start"] - 0.3)
+        if not segs or segs[-1][0] != line["scene"]:
+            if segs:
+                segs[-1][2] = start
+            segs.append([line["scene"], start, timeline["total"]])
+    return segs
+
+
+def _mix_sounds(timeline):
+    """voice.mp3 + scene background sounds + one-off effects -> audio.m4a (voice stays on top)."""
+    if not SFX.exists():
+        (OUT / "voice.mp3").replace(OUT / "audio.mp3")
+        return
+    inputs, filters, labels = ["-i", str(OUT / "voice.mp3")], [], ["[0:a]"]
+    n = 1
+    segs = _segments(timeline)
+    for i, (scene, start, end) in enumerate(segs):
+        dur = end - start
+        for name, vol in BEDS.get(scene, []):
+            inputs += ["-stream_loop", "-1", "-i", str(SFX / f"{name}.mp3")]
+            ms = int(start * 1000)
+            filters.append(f"[{n}:a]atrim=0:{dur:.2f},asetpts=PTS-STARTPTS,volume={vol},"
+                           f"afade=t=in:d=0.4,afade=t=out:st={max(0, dur - 0.5):.2f}:d=0.5,adelay={ms}|{ms}[b{n}]")
+            labels.append(f"[b{n}]"); n += 1
+        if i > 0:  # whoosh on every scene change
+            inputs += ["-i", str(SFX / "whoosh.mp3")]
+            ms = int(max(0, start - 0.15) * 1000)
+            filters.append(f"[{n}:a]volume=0.35,adelay={ms}|{ms}[h{n}]")
+            labels.append(f"[h{n}]"); n += 1
+        for name, at, vol in HITS.get(scene, []):
+            if at < dur:
+                inputs += ["-i", str(SFX / f"{name}.mp3")]
+                ms = int((start + at) * 1000)
+                filters.append(f"[{n}:a]volume={vol},adelay={ms}|{ms}[h{n}]")
+                labels.append(f"[h{n}]"); n += 1
+    filters.append(f"{''.join(labels)}amix=inputs={len(labels)}:normalize=0:duration=first,alimiter=limit=0.95[out]")
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *inputs, "-filter_complex", ";".join(filters),
+                    "-map", "[out]", "-t", str(timeline["total"]), "-c:a", "libmp3lame", "-b:a", "192k",
+                    str(OUT / "audio.mp3")], check=True)
 
 
 def _record(timeline, ep):
@@ -88,7 +160,7 @@ def _record(timeline, ep):
         browser.close()
     video = OUT / "short.mp4"
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{offset:.2f}", "-i", str(next(raw.glob("*.webm"))),
-                    "-i", str(OUT / "voice.mp3"), "-vf", "scale=1080:1920:flags=lanczos,fps=30",
+                    "-i", str(OUT / "audio.mp3"), "-vf", "scale=1080:1920:flags=lanczos,fps=30",
                     "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20", "-c:a", "aac", "-b:a", "160k",
                     "-t", str(timeline["total"]), str(video)], check=True)
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", "3", "-i", str(video), "-frames:v", "1",
