@@ -1,0 +1,82 @@
+name: Instagram Cards
+
+# One Way2News-style tip card (pdfdon tool picture + Telugu text, 1080x1350) to Instagram every evening.
+on:
+  schedule:
+    - cron: "30 12 * * *"   # 12:30 UTC = 6:00 PM India time, every day
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Test only - make the card, do not post"
+        type: boolean
+        default: true
+      tip:
+        description: "Tip id from cards/tips.json (empty = next one)"
+        type: string
+        default: ""
+
+permissions:
+  contents: write   # temporary GitHub Release that Instagram fetches the image from, and the state file
+
+concurrency:
+  group: cards
+  cancel-in-progress: false
+
+jobs:
+  card:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Telugu fonts
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q fonts-noto-core fonts-noto-color-emoji
+
+      - name: Install Python packages and browser
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Make and post the card
+        id: run
+        env:
+          PYTHONUNBUFFERED: "1"
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+          TIP: ${{ inputs.tip }}
+        run: |
+          if [ "$DRY_RUN" = "true" ]; then
+            python -m bot.cards --dry-run --id "$TIP"
+          else
+            python -m bot.cards --id "$TIP"
+          fi
+
+      - name: Keep the card for 14 days
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: card
+          path: |
+            out_cards/card.jpg
+            out_cards/caption.txt
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Remember the card
+        if: steps.run.outputs.saved == 'true'
+        run: |
+          git config user.name "pdfdon-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/cards_done.json
+          git commit -m "Card posted"
+          git pull --rebase -q
+          git push
