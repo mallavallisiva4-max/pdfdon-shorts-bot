@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="te">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1350px; overflow: hidden; background: #fff;
+    font-family: "Nirmala UI", "Noto Sans Telugu", "Noto Sans", sans-serif; }
+  .media { position: relative; width: 1080px; height: 760px; background: #111; overflow: hidden; }
+  .media img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+  .tag { position: absolute; top: 28px; left: 28px; background: #e2531c; color: #fff; font-size: 30px; font-weight: 800;
+    padding: 10px 24px; border-radius: 40px; box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+  .logo { position: absolute; top: 28px; right: 28px; background: rgba(255,255,255,.95); color: #e2531c; font-size: 30px;
+    font-weight: 900; padding: 10px 22px; border-radius: 40px; }
+  .body { height: 590px; padding: 40px 54px 0; display: flex; flex-direction: column; }
+  h1 { font-size: 54px; line-height: 1.32; color: #14213d; font-weight: 800; }
+  .bar { width: 120px; height: 8px; background: #e2531c; border-radius: 6px; margin: 26px 0 24px; }
+  p { font-size: 36px; line-height: 1.55; color: #333; }
+  .foot { margin-top: auto; height: 110px; margin-left: -54px; margin-right: -54px; background: #14213d; color: #fff;
+    display: flex; align-items: center; justify-content: space-between; padding: 0 54px; font-size: 32px; font-weight: 700; }
+  .foot b { color: #ffd166; font-size: 40px; }
+</style>
+</head>
+<body>
+  <div class="media"><img id="img" src=""><div class="tag" id="tag"></div><div class="logo">PDFDon తెలుగు</div></div>
+  <div class="body">
+    <h1 id="title"></h1>
+    <div class="bar"></div>
+    <p id="text"></p>
+    <div class="foot"><span>👉 ఫ్రీ టూల్స్, తెలుగులో</span><b>pdfdon.com</b></div>
+  </div>
+<script>
+  window.fill = (c) => {
+    document.getElementById('img').src = c.image || '';
+    document.getElementById('tag').textContent = c.tag;
+    document.getElementById('title').textContent = c.title;
+    document.getElementById('text').textContent = c.text;
+  };
+</script>
+</body>
+</html>

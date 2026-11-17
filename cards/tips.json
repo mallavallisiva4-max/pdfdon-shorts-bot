@@ -1,0 +1,23 @@
+[
+ {"id": "photo-signature-resizer", "title": "Exam form కి photo, signature సైజు ఒక్క నిమిషంలో", "text": "20 KB, 50 KB లాంటి ఖచ్చితమైన సైజుకి photo, సంతకం మార్చుకోండి. App install అక్కర్లేదు, login అక్కర్లేదు. మీ photo మీ phone లోనే ఉంటుంది."},
+ {"id": "compress-pdf", "title": "PDF చాలా పెద్దదా? ఇలా చిన్నది చేయండి", "text": "Online form లో 'file size too large' వస్తే, 200 KB, 100 KB లేదా మీకు కావాల్సిన limit టైప్ చేసి PDF సైజు తగ్గించుకోండి. పూర్తిగా ఫ్రీ."},
+ {"id": "merge-pdf", "title": "చాలా PDF లను ఒకే PDF గా కలపండి", "text": "Certificates అన్నీ ఒకే ఫైల్‌గా పంపమన్నారా? PDF లను మీకు కావాల్సిన వరుసలో పెట్టి ఒక్క click తో ఒకే PDF చేసుకోండి."},
+ {"id": "jpg-to-pdf", "title": "Photos ని PDF గా మార్చడం చాలా సులువు", "text": "Phone లో ఉన్న photos ఎంచుకోండి, ఒకే PDF ఫైల్ వస్తుంది. Office కి, college కి documents పంపడానికి బాగా ఉపయోగపడుతుంది."},
+ {"id": "document-scanner-pdf", "title": "మీ phone నే scanner గా మార్చుకోండి", "text": "Camera తో document photo తీయండి. పేజీ అంచులు గుర్తించి, నిటారుగా చేసి, శుభ్రమైన PDF ఇస్తుంది. Xerox shop కి వెళ్ళక్కర్లేదు."},
+ {"id": "passport-photo-sheet", "title": "ఒక్క photo తో 8 passport photos", "text": "మీ photo crop చేయండి. A4 లేదా 4×6 పేపర్ మీద చాలా copies వస్తాయి. ఇంట్లోనే లేదా దగ్గరలోని shop లో తక్కువ ఖర్చుతో print చేసుకోండి."},
+ {"id": "background-remover", "title": "Photo వెనుక background ఒక్క click లో తీసేయండి", "text": "ID card, application కి తెల్ల background కావాలా? AI మీ phone లోనే పనిచేసి background తీసేస్తుంది. Photo ఎవరికీ upload అవ్వదు."},
+ {"id": "resume-maker", "title": "Freshers కి ఫ్రీ Resume Maker", "text": "పేరు, చదువు, skills నింపండి. అందమైన templates, live preview, A4 PDF download. ఉద్యోగ ప్రయత్నాలకి మొదటి అడుగు."},
+ {"id": "image-to-text-ocr", "title": "Photo లోని తెలుగు అక్షరాలను text గా మార్చండి", "text": "Printed notes, documents photo తీస్తే, తెలుగు, ఇంగ్లీష్, హిందీ, తమిళ్, కన్నడ అక్షరాలను చదివి copy చేసుకునే text ఇస్తుంది. మళ్ళీ టైప్ చేయక్కర్లేదు."},
+ {"id": "sign-pdf", "title": "Printer లేకుండా PDF మీద సంతకం", "text": "వేలితో సంతకం గీయండి లేదా సంతకం photo పెట్టండి. PDF లో కావాల్సిన చోట పెట్టి save చేయండి. Print, scan అక్కర్లేదు."},
+ {"id": "invoice-maker", "title": "Shop కి GST bill phone లోనే", "text": "Shop పేరు, వస్తువులు, ధరలు నింపండి. CGST, SGST లేదా IGST లెక్కతో సహా professional invoice PDF వస్తుంది."},
+ {"id": "gst-calculator", "title": "GST లెక్క సెకన్లలో", "text": "ధరకి GST కలపాలా, లేదా GST తో ఉన్న ధర నుండి తీసేయాలా? 5%, 12%, 18%, 28% అన్నీ, CGST/SGST విభజనతో సహా చూపిస్తుంది."},
+ {"id": "loan-calculator", "title": "Loan తీసుకునే ముందు EMI ఎంతో చూసుకోండి", "text": "Loan మొత్తం, వడ్డీ రేటు, నెలలు ఇవ్వండి. నెలకి EMI ఎంత, మొత్తం ఎంత వడ్డీ కడతారో వెంటనే తెలుస్తుంది."},
+ {"id": "age-calculator", "title": "Exam age limit కి మీ ఖచ్చితమైన వయసు", "text": "పుట్టిన తేదీ ఇవ్వండి. సంవత్సరాలు, నెలలు, రోజులతో సహా వయసు, తర్వాతి పుట్టినరోజు ఎప్పుడో చూపిస్తుంది."},
+ {"id": "typing-speed-test", "title": "తెలుగు, ఇంగ్లీష్ typing speed test", "text": "Government job typing పరీక్షలకి రోజూ ప్రాక్టీస్ చేయండి. WPM, accuracy తెలుస్తాయి. 1, 3, 5, 10 నిమిషాల tests ఉన్నాయి."},
+ {"id": "marriage-biodata-maker", "title": "తెలుగులో marriage biodata", "text": "వ్యక్తిగత, చదువు, ఉద్యోగ, కుటుంబ వివరాలు, photo తో అందమైన biodata. తెలుగు లేదా ఇంగ్లీష్‌లో తయారు చేసుకోండి."},
+ {"id": "visiting-card-designer", "title": "మీ shop కి visiting card మీరే design చేయండి", "text": "పేరు, phone, address నింపండి. ముందు వెనుక design, cut marks తో print sheet వస్తుంది. Designer కి డబ్బులు అక్కర్లేదు."},
+ {"id": "pdf-to-jpg", "title": "PDF పేజీలను photos గా మార్చండి", "text": "PDF లోని పేజీలను JPG images గా మార్చి WhatsApp లో పంపుకోండి లేదా status లో పెట్టుకోండి."},
+ {"id": "split-pdf", "title": "పెద్ద PDF నుండి కావాల్సిన పేజీలు మాత్రమే", "text": "100 పేజీల PDF నుండి కొన్ని పేజీలే కావాలా? Split చేసి కావాల్సినవి మాత్రమే వేరే PDF గా తీసుకోండి."},
+ {"id": "protect-pdf", "title": "మీ PDF కి password పెట్టండి", "text": "Bank statements, Aadhaar లాంటి ముఖ్యమైన PDF లకి password పెట్టి సురక్షితంగా పంపండి. Password తెలిసినవాళ్ళే తెరవగలరు."},
+ {"id": "kids-project-work-maker", "title": "పిల్లల school project work ఈజీగా", "text": "రంగుల cover pages, project pages, charts, worksheets తయారు చేసి print చేసుకోండి. అమ్మానాన్నలు పిల్లలతో కలిసి చేయొచ్చు."}
+]
