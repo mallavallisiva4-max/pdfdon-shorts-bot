@@ -74,16 +74,24 @@ def ap_inbox():
     return json.loads(path.read_text(encoding="utf-8")).get("items", [])
 
 
-def appsc_any():
-    """Direct read when the site answers (e.g. on the laptop), else the laptop's inbox."""
+def _direct_or_inbox(read, source):
+    """Direct read when the site answers, else what the laptop sent for that source."""
     try:
-        return appsc()
+        return read()
     except Exception as e:
-        print(f"  appsc direct read failed ({type(e).__name__}) - using the laptop inbox")
-        return ap_inbox()
+        print(f"  {source} direct read failed ({type(e).__name__}) - using the laptop inbox")
+        return [x for x in ap_inbox() if x.get("source") == source]
 
 
-READERS = [appsc_any, tgpsc]
+def appsc_any():
+    return _direct_or_inbox(appsc, "APPSC")
+
+
+def tgpsc_any():
+    return _direct_or_inbox(tgpsc, "TGPSC")
+
+
+READERS = [appsc_any, tgpsc_any]
 
 
 def candidates():

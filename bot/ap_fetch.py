@@ -13,6 +13,7 @@ import getpass
 import json
 import pathlib
 import sys
+import urllib.error
 import urllib.request
 
 from . import job_sources
@@ -52,12 +53,21 @@ def read_repo_json(path, token):
 
 
 def setup():
-    token = getpass.getpass("GitHub token paste చేసి Enter నొక్కండి (కనిపించదు): ").strip()
-    if not token:
-        print("Token ఇవ్వలేదు."); return
-    gh("GET", "", token)  # check it works
+    print("Token paste చేయడానికి window లోపల MOUSE RIGHT-CLICK చేయండి (Ctrl+V పనిచేయదు). Token కనిపించదు.")
+    raw = getpass.getpass("GitHub token paste చేసి Enter నొక్కండి: ")
+    token = "".join(ch for ch in raw if ch.isprintable()).strip()
+    if not token.startswith(("github_pat_", "ghp_")):
+        print(f"❌ ఇది token లా లేదు ({len(token)} అక్షరాలు వచ్చాయి). github_pat_ తో మొదలయ్యే token ని right-click తో paste చేయండి.")
+        return
+    req = urllib.request.Request(f"https://api.github.com/repos/{REPO}", headers={
+        "Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json", "User-Agent": "pdfdon-ap-fetch"})
+    try:
+        urllib.request.urlopen(req, timeout=30).close()
+    except urllib.error.HTTPError as e:
+        print(f"❌ GitHub ఈ token ని ఒప్పుకోలేదు ({e.code}). Token పూర్తిగా copy అయిందో, pdfdon-shorts-bot repo ఎంచుకున్నారో చూడండి.")
+        return
     TOKEN_FILE.write_text(token, encoding="utf-8")
-    print(f"సేవ్ అయింది: {TOKEN_FILE}  ✅")
+    print(f"సేవ్ అయింది ✅  (token పనిచేస్తోంది)")
 
 
 def main():
@@ -69,10 +79,24 @@ def main():
     done, _ = read_repo_json("state/jobs_done.json", token)
     done = set(done or [])
     items = []
-    for c in job_sources.appsc():
+    today = dt.date.today()
+    found = []
+    for read in (job_sources.appsc, job_sources.tgpsc):  # TGPSC too: it sometimes blocks GitHub as well
+        try:
+            found.append(read())
+        except Exception as e:
+            log(f"{read.__name__} failed: {type(e).__name__}")
+    mixed = [x[i] for i in range(max((len(x) for x in found), default=0)) for x in found if i < len(x)]
+    for c in mixed:
         key = f"{c['source']}:{c['id']}"
         if key in done:
             continue
+        if c.get("end_date"):
+            try:
+                if dt.datetime.strptime(c["end_date"], "%d/%m/%Y").date() <= today:
+                    continue
+            except ValueError:
+                pass
         try:
             text = job_sources.pdf_text(c["url"])
         except Exception as e:
@@ -89,7 +113,7 @@ def main():
     if sha:
         body["sha"] = sha
     gh("PUT", "contents/state/ap_inbox.json", token, body)
-    log(f"sent {len(items)} AP notifications to GitHub")
+    log(f"sent {len(items)} AP/TS notifications to GitHub")
 
 
 if __name__ == "__main__":
