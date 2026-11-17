@@ -131,7 +131,7 @@ def find_job(done):
         tried += 1
         print(f"  checking {key}: {c['title'][:90]}")
         try:
-            text = job_sources.pdf_text(c["url"])
+            text = c.get("text") or job_sources.pdf_text(c["url"])
         except Exception as e:
             print(f"    PDF not readable ({type(e).__name__})"); continue
         if len(text) < 500:

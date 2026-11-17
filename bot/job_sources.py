@@ -64,7 +64,26 @@ def tgpsc():
     return out
 
 
-READERS = [appsc, tgpsc]
+def ap_inbox():
+    """APPSC notifications sent by the user's laptop (AP sites block foreign servers). Text is included."""
+    import json
+    import pathlib
+    path = pathlib.Path(__file__).resolve().parent.parent / "state" / "ap_inbox.json"
+    if not path.exists():
+        return []
+    return json.loads(path.read_text(encoding="utf-8")).get("items", [])
+
+
+def appsc_any():
+    """Direct read when the site answers (e.g. on the laptop), else the laptop's inbox."""
+    try:
+        return appsc()
+    except Exception as e:
+        print(f"  appsc direct read failed ({type(e).__name__}) - using the laptop inbox")
+        return ap_inbox()
+
+
+READERS = [appsc_any, tgpsc]
 
 
 def candidates():
