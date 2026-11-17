@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="te">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 720px; height: 1280px; overflow: hidden; background: #000;
+    font-family: "Nirmala UI", "Noto Sans Telugu", "Noto Sans", sans-serif; }
+  #stage { position: relative; width: 720px; height: 1280px; overflow: hidden; opacity: 0; transition: opacity .4s; }
+  #stage.on { opacity: 1; }
+  .scene { position: absolute; inset: 0; opacity: 0; transition: opacity .6s ease; }
+  .scene.show { opacity: 1; }
+
+  .sky-night { background: linear-gradient(#0b1440 0%, #23346e 55%, #3c4f8a 100%); }
+  .sky-day   { background: linear-gradient(#7fd3ff 0%, #c8f0ff 60%, #e8fbe0 100%); }
+  .moon { position: absolute; top: 90px; right: 90px; width: 130px; height: 130px; border-radius: 50%;
+    background: radial-gradient(circle at 40% 40%, #fffbe6, #ffe9a3); box-shadow: 0 0 80px 20px rgba(255,240,170,.35); }
+  .star { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #fff; animation: twinkle 2.4s infinite; }
+  @keyframes twinkle { 50% { opacity: .2; transform: scale(.6); } }
+  .sun { position: absolute; top: 80px; left: 70px; width: 150px; height: 150px; border-radius: 50%;
+    background: radial-gradient(circle, #fff6a8, #ffc93c); box-shadow: 0 0 90px 30px rgba(255,210,80,.5); }
+  .hill { position: absolute; left: -100px; right: -100px; bottom: 0; height: 520px; border-radius: 50% 50% 0 0; }
+  .night .hill { background: #1d3b2a; }
+  .day .hill { background: #6cc24a; }
+  .tree { position: absolute; bottom: 430px; width: 40px; height: 260px; border-radius: 10px; }
+  .tree::before { content: ""; position: absolute; left: -110px; top: -150px; width: 260px; height: 220px; border-radius: 50%; }
+  .night .tree { background: #12261b; } .night .tree::before { background: #183323; }
+
+  .char { position: absolute; transform-origin: 50% 100%; }
+  .char.talk { animation: bob .5s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(-8px) scale(1.02); } }
+  .mouth { transform-origin: center; transform-box: fill-box; }
+  .char.talk .mouth { animation: mouth .22s ease-in-out infinite alternate; }
+  @keyframes mouth { from { transform: scaleY(.25); } to { transform: scaleY(1.15); } }
+  .eye { transform-origin: center; transform-box: fill-box; animation: blink 4s infinite; }
+  @keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.1); } }
+  .tail { transform-origin: 0 0; transform-box: fill-box; animation: wag 1.6s ease-in-out infinite; }
+  @keyframes wag { 50% { transform: rotate(14deg); } }
+  .jump { animation: jump .7s ease-in-out infinite; }
+  @keyframes jump { 50% { transform: translateY(-70px); } }
+
+  .phone { position: absolute; left: 160px; top: 230px; width: 400px; height: 640px; border-radius: 42px;
+    background: #111; padding: 18px; box-shadow: 0 30px 60px rgba(0,0,0,.35); }
+  .screen { width: 100%; height: 100%; border-radius: 28px; background: #fff; overflow: hidden; position: relative; padding: 26px 22px; }
+  .url { background: #eef2f7; border-radius: 30px; padding: 10px 18px; font-size: 21px; color: #333; margin-bottom: 22px; white-space: nowrap; overflow: hidden; }
+  .formtitle { font-size: 29px; font-weight: 700; color: #1b2a4a; margin-bottom: 16px; line-height: 1.3; }
+  .field { height: 46px; border-radius: 10px; background: #f1f3f6; margin-bottom: 14px; }
+  .btn { margin-top: 18px; min-height: 60px; border-radius: 14px; background: #2b6cff; color: #fff; font-size: 24px; padding: 8px;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; text-align: center; }
+  .iconbox { height: 170px; border-radius: 16px; background: #dfe8f3; display: flex; align-items: center; justify-content: center; font-size: 80px; }
+  .big { font-size: 40px; font-weight: 800; text-align: center; color: #c0001a; margin-top: 12px; line-height: 1.2; }
+  .err { position: absolute; left: 18px; right: 18px; bottom: 26px; background: #ffe3e3; color: #c0001a; border-radius: 16px;
+    padding: 16px; font-size: 24px; font-weight: 700; text-align: center; line-height: 1.35; }
+  .scene.show .err { animation: shake .5s 1s 3; }
+  @keyframes shake { 25% { transform: translateX(-12px); } 75% { transform: translateX(12px); } }
+
+  .tile { display: flex; align-items: center; gap: 14px; background: #f3f7ff; border: 2px solid #d7e3ff; border-radius: 18px;
+    padding: 14px; margin-bottom: 14px; font-size: 24px; font-weight: 700; color: #1b2a4a; opacity: 0; transform: translateX(80px); line-height: 1.25; }
+  .tile .ic { flex: none; width: 54px; height: 54px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 30px; color: #fff; }
+  .scene.show .tile { animation: slide .5s forwards; }
+  .scene.show .tile:nth-child(4) { animation-delay: 1.4s; }
+  .scene.show .tile:nth-child(5) { animation-delay: 2.6s; }
+  @keyframes slide { to { opacity: 1; transform: none; } }
+  .result { font-size: 38px; font-weight: 800; text-align: center; color: #0a8f3c; margin-top: 10px; line-height: 1.25; }
+
+  .badge { position: absolute; left: 90px; right: 90px; height: 150px; border-radius: 30px; display: flex; align-items: center;
+    gap: 26px; padding: 0 34px; font-size: 40px; font-weight: 800; color: #fff; opacity: 0; transform: scale(.5); }
+  .badge span { font-size: 64px; }
+  .scene.show .badge { animation: pop .5s cubic-bezier(.2,1.6,.4,1) forwards; }
+  .scene.show .badge:nth-of-type(2) { animation-delay: 1.4s; }
+  .scene.show .badge:nth-of-type(3) { animation-delay: 3s; }
+  @keyframes pop { to { opacity: 1; transform: none; } }
+
+  .bubble { position: absolute; background: #fff; border-radius: 30px; padding: 22px 30px; font-size: 44px; font-weight: 800;
+    color: #e2531c; box-shadow: 0 12px 30px rgba(0,0,0,.25); }
+  .bubble::after { content: ""; position: absolute; bottom: -26px; left: 70px; border: 16px solid transparent; border-top: 26px solid #fff; }
+  .scene.show .bubble { animation: pop .5s cubic-bezier(.2,1.6,.4,1) .8s both; }
+
+  .confetti { position: absolute; top: -40px; width: 16px; height: 26px; border-radius: 4px; animation: fall 3s linear infinite; }
+  @keyframes fall { to { transform: translateY(1400px) rotate(720deg); } }
+  .win { position: absolute; top: 190px; left: 20px; right: 20px; text-align: center; font-size: 76px; font-weight: 900; color: #fff; line-height: 1.2;
+    text-shadow: 0 6px 0 #0a8f3c, 0 14px 30px rgba(0,0,0,.3); }
+  .scene.show .win { animation: pop .6s cubic-bezier(.2,1.6,.4,1) both; }
+
+  .brand { position: absolute; top: 170px; left: 0; right: 0; text-align: center; color: #fff; }
+  .brand .bigb { font-size: 96px; font-weight: 900; color: #ffd166; text-shadow: 0 6px 24px rgba(0,0,0,.5); }
+  .brand .small { font-size: 38px; font-weight: 700; margin-top: 14px; }
+  .zzz { position: absolute; font-size: 54px; font-weight: 900; color: #cfe0ff; animation: zz 2.4s ease-out infinite; }
+  @keyframes zz { from { opacity: 0; transform: translate(0,0) scale(.6); } 30% { opacity: 1; } to { opacity: 0; transform: translate(60px,-140px) scale(1.2); } }
+
+  .series { position: absolute; top: 26px; left: 26px; font-size: 24px; font-weight: 800; color: #fff; background: rgba(0,0,0,.35); padding: 8px 16px; border-radius: 20px; }
+  #brandtag { position: absolute; top: 26px; right: 26px; font-size: 24px; font-weight: 800; color: #fff; background: rgba(0,0,0,.35); padding: 8px 16px; border-radius: 20px; }
+  #cap { position: absolute; left: 30px; right: 30px; bottom: 60px; background: rgba(10,14,30,.82); border-radius: 26px;
+    padding: 22px 26px 26px; color: #fff; font-size: 35px; line-height: 1.45; font-weight: 700; text-align: center;
+    border: 3px solid rgba(255,209,102,.6); }
+  #who { display: inline-block; font-size: 24px; font-weight: 800; padding: 4px 18px; border-radius: 30px; margin-bottom: 10px; color: #1b1b1b; }
+  #who.father { background: #ffb347; } #who.cub { background: #ffd8a8; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="scene night sky-night" data-scene="night">
+    <div class="moon"></div><div class="hill"></div><div class="tree" style="left:70px"></div>
+    <div class="char" id="father" style="left:40px; top:420px; width:430px"></div>
+    <div class="char" id="cub" style="left:430px; top:640px; width:250px"></div>
+  </div>
+
+  <div class="scene day sky-day" data-scene="hero">
+    <div class="sun"></div><div class="hill"></div>
+    <div class="phone" style="top:150px; left:250px; width:380px; height:600px; transform: rotate(4deg)">
+      <div class="screen">
+        <div class="url" data-f="url"></div>
+        <div class="formtitle" data-f="form"></div>
+        <div class="field"></div><div class="field"></div><div class="field" style="width:70%"></div>
+        <div class="btn" data-f="button"></div>
+      </div>
+    </div>
+    <div class="char hero" data-mood="" style="left:30px; top:560px; width:300px"></div>
+  </div>
+
+  <div class="scene day sky-day" data-scene="error">
+    <div class="hill"></div>
+    <div class="phone">
+      <div class="screen">
+        <div class="url" data-f="url"></div>
+        <div class="formtitle" data-f="form"></div>
+        <div class="iconbox" data-f="icon"></div>
+        <div class="big" data-f="big"></div>
+        <div class="err" data-f="error"></div>
+      </div>
+    </div>
+    <div class="char hero" data-mood="sad" style="left:480px; top:640px; width:220px"></div>
+  </div>
+
+  <div class="scene night sky-night" data-scene="owl">
+    <div class="moon" style="left:60px; right:auto"></div><div class="hill"></div>
+    <div style="position:absolute; left:-20px; right:120px; top:690px; height:34px; background:#4a2f1b; border-radius:20px; transform:rotate(-6deg)"></div>
+    <div class="char" id="owl" style="left:300px; top:440px; width:250px"></div>
+    <div class="bubble" style="left:90px; top:250px">pdfdon.com 💡</div>
+    <div class="char hero" data-mood="" style="left:20px; top:760px; width:220px"></div>
+  </div>
+
+  <div class="scene day" data-scene="tools" style="background: linear-gradient(#fff3e0, #ffe0b2)">
+    <div class="phone" style="top:120px; height:780px">
+      <div class="screen" id="toolscreen">
+        <div class="url">🔒 pdfdon.com</div>
+        <div class="formtitle" style="color:#e2531c">PDFDon ఫ్రీ టూల్స్</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scene" data-scene="free" style="background: linear-gradient(#1b2a4a, #2e4a7d)">
+    <div class="badge" style="top:200px; background:#0a8f3c"><span>💸</span>అంతా ఫ్రీ</div>
+    <div class="badge" style="top:410px; background:#2b6cff"><span>📲</span>యాప్ అవసరం లేదు</div>
+    <div class="badge" style="top:620px; background:#e2531c"><span>🔒</span>ఫైల్స్ మీ ఫోన్‌లోనే</div>
+  </div>
+
+  <div class="scene day sky-day" data-scene="success">
+    <div class="sun"></div><div class="hill"></div>
+    <div class="win" data-f="win"></div>
+    <div class="char hero jump" data-mood="happy" style="left:210px; top:560px; width:300px"></div>
+    <div id="confetti"></div>
+  </div>
+
+  <div class="scene night sky-night" data-scene="end">
+    <div class="moon"></div><div class="hill"></div>
+    <div class="brand"><div class="bigb">pdfdon.com</div><div class="small">60+ ఫ్రీ టూల్స్ • తెలుగులో</div></div>
+    <div class="char" id="father2" style="left:40px; top:470px; width:400px"></div>
+    <div class="char" id="cub2" style="left:420px; top:690px; width:240px"></div>
+    <div class="zzz" style="left:560px; top:640px">Z</div>
+    <div class="zzz" style="left:600px; top:620px; animation-delay:.8s">z</div>
+  </div>
+
+  <div class="series">🦁 సింహం నాన్న కథలు</div>
+  <div id="brandtag">PDFDon Telugu</div>
+  <div id="cap"><div id="who"></div><div id="line"></div></div>
+</div>
+
+<script>
+function lion(isCub, sleeping) {
+  const mane = isCub ? '#e8a33c' : '#b8561b', fur = isCub ? '#ffd27a' : '#f2b24a', petals = [];
+  for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2;
+    petals.push(`<circle cx="${150 + Math.cos(a) * 92}" cy="${130 + Math.sin(a) * 92}" r="${isCub ? 30 : 44}" fill="${mane}"/>`); }
+  const eyes = sleeping
+    ? `<path d="M112 128 q12 10 24 0" stroke="#3a2210" stroke-width="5" fill="none"/><path d="M164 128 q12 10 24 0" stroke="#3a2210" stroke-width="5" fill="none"/>`
+    : `<g class="eye"><ellipse cx="124" cy="124" rx="11" ry="14" fill="#2a1a0c"/><circle cx="128" cy="119" r="4" fill="#fff"/></g>
+       <g class="eye"><ellipse cx="176" cy="124" rx="11" ry="14" fill="#2a1a0c"/><circle cx="180" cy="119" r="4" fill="#fff"/></g>`;
+  return `<svg viewBox="0 0 300 330" width="100%">
+    <path class="tail" d="M250 260 q60 -10 40 -80" stroke="${fur}" stroke-width="14" fill="none" stroke-linecap="round"/>
+    <circle cx="292" cy="176" r="15" fill="${mane}"/>
+    <ellipse cx="160" cy="265" rx="110" ry="62" fill="${fur}"/>
+    <ellipse cx="95" cy="315" rx="30" ry="16" fill="${fur}"/><ellipse cx="205" cy="315" rx="30" ry="16" fill="${fur}"/>
+    ${petals.join('')}
+    <circle cx="150" cy="130" r="${isCub ? 88 : 80}" fill="${fur}"/>
+    <circle cx="92" cy="70" r="20" fill="${fur}"/><circle cx="208" cy="70" r="20" fill="${fur}"/>
+    <circle cx="92" cy="70" r="10" fill="#e98c6a"/><circle cx="208" cy="70" r="10" fill="#e98c6a"/>
+    ${eyes}
+    ${isCub ? '<circle cx="100" cy="155" r="13" fill="#ff9f8a" opacity=".6"/><circle cx="200" cy="155" r="13" fill="#ff9f8a" opacity=".6"/>' : ''}
+    <ellipse cx="150" cy="160" rx="40" ry="30" fill="#ffe9c2"/>
+    <path d="M136 146 h28 l-14 14 z" fill="#5a2d14"/>
+    <ellipse class="mouth" cx="150" cy="178" rx="13" ry="9" fill="#7a1f1f"/>
+  </svg>`;
+}
+
+// One cute animal: shared body/face, with per-animal colours and extras.
+const KINDS = {
+  monkey:   { fur: '#7b4a26', face: '#e9c39a', belly: '#e9c39a' },
+  rabbit:   { fur: '#f4f1ee', face: '#ffffff', belly: '#ffffff', inner: '#ffb6c8' },
+  elephant: { fur: '#9aa7b4', face: '#aeb9c4', belly: '#b9c3cd', inner: '#e9b8c2' },
+  tortoise: { fur: '#8cc56a', face: '#a5d683', belly: '#d9c27a', shell: '#7a5a2e', shell2: '#a77b3f' },
+  deer:     { fur: '#c98a4b', face: '#e6b07a', belly: '#f5dcc0' },
+  bear:     { fur: '#6d4128', face: '#b98a62', belly: '#b98a62' },
+};
+function animal(kind, mood) {
+  const k = KINDS[kind] || KINDS.monkey;
+  const mouth = mood === 'sad' ? '<path d="M128 192 q22 -18 44 0" stroke="#4a2410" stroke-width="6" fill="none"/>'
+    : mood === 'happy' ? '<path d="M120 178 q30 40 60 0 z" fill="#7a1f1f"/>'
+    : '<path d="M126 182 q24 18 48 0" stroke="#4a2410" stroke-width="6" fill="none"/>';
+  const tear = mood === 'sad' ? '<ellipse cx="108" cy="160" rx="7" ry="12" fill="#6ec6ff"/>' : '';
+  let back = '', ears = '', front = '', faceShape = `<ellipse cx="150" cy="150" rx="66" ry="58" fill="${k.face}"/>`;
+  let tail = `<path class="tail" d="M225 275 q70 0 45 -70" stroke="${k.fur}" stroke-width="14" fill="none" stroke-linecap="round"/>`;
+  if (kind === 'monkey') {
+    ears = `<circle cx="62" cy="130" r="34" fill="${k.fur}"/><circle cx="238" cy="130" r="34" fill="${k.fur}"/>
+            <circle cx="62" cy="130" r="18" fill="${k.face}"/><circle cx="238" cy="130" r="18" fill="${k.face}"/>`;
+    faceShape = `<path d="M85 140 q0 -70 65 -60 q65 -10 65 60 q0 70 -65 70 q-65 0 -65 -70z" fill="${k.face}"/>`;
+    tail = `<path class="tail" d="M220 270 q80 0 50 -90 q-20 -40 10 -50" stroke="${k.fur}" stroke-width="14" fill="none" stroke-linecap="round"/>`;
+  } else if (kind === 'rabbit') {
+    ears = `<ellipse cx="110" cy="20" rx="26" ry="80" fill="${k.fur}" transform="rotate(-10 110 60)"/>
+            <ellipse cx="190" cy="20" rx="26" ry="80" fill="${k.fur}" transform="rotate(10 190 60)"/>
+            <ellipse cx="110" cy="24" rx="12" ry="58" fill="${k.inner}" transform="rotate(-10 110 60)"/>
+            <ellipse cx="190" cy="24" rx="12" ry="58" fill="${k.inner}" transform="rotate(10 190 60)"/>`;
+    tail = `<circle cx="232" cy="292" r="24" fill="#fff"/>`;
+    front = `<rect x="140" y="182" width="9" height="14" rx="2" fill="#fff" stroke="#ccc"/><rect x="151" y="182" width="9" height="14" rx="2" fill="#fff" stroke="#ccc"/>`;
+  } else if (kind === 'elephant') {
+    ears = `<ellipse cx="55" cy="140" rx="62" ry="78" fill="${k.fur}"/><ellipse cx="245" cy="140" rx="62" ry="78" fill="${k.fur}"/>
+            <ellipse cx="60" cy="140" rx="40" ry="55" fill="${k.inner}"/><ellipse cx="240" cy="140" rx="40" ry="55" fill="${k.inner}"/>`;
+    faceShape = '';
+    front = `<path d="M150 150 q-6 70 30 95 q12 6 14 -6" stroke="#6f7c8a" stroke-width="36" fill="none" stroke-linecap="round"/>
+             <path d="M150 150 q-6 70 30 95 q12 6 14 -6" stroke="#a3afbb" stroke-width="28" fill="none" stroke-linecap="round"/>
+             <path d="M140 190 h22 M144 210 h22 M152 228 h20" stroke="#7d8a97" stroke-width="3"/>`;
+    tail = `<path class="tail" d="M228 280 q40 10 40 40" stroke="${k.fur}" stroke-width="8" fill="none" stroke-linecap="round"/>`;
+  } else if (kind === 'tortoise') {
+    back = `<ellipse cx="160" cy="262" rx="135" ry="80" fill="${k.shell}"/>
+            <ellipse cx="160" cy="250" rx="110" ry="60" fill="${k.shell2}"/>
+            <path d="M100 250 l30 -30 h60 l30 30 l-30 30 h-60z" fill="${k.shell}" opacity=".6"/>`;
+    ears = '';
+    tail = '';
+  } else if (kind === 'deer') {
+    ears = `<path d="M110 55 q-30 -60 -10 -90 M100 20 q-25 -10 -35 -30 M190 55 q30 -60 10 -90 M200 20 q25 -10 35 -30"
+              stroke="#7a4b22" stroke-width="10" fill="none" stroke-linecap="round"/>
+            <ellipse cx="70" cy="100" rx="34" ry="18" fill="${k.fur}" transform="rotate(-30 70 100)"/>
+            <ellipse cx="230" cy="100" rx="34" ry="18" fill="${k.fur}" transform="rotate(30 230 100)"/>`;
+    front = '';
+    back = `<circle cx="110" cy="255" r="9" fill="#fff" opacity=".8"/><circle cx="200" cy="245" r="8" fill="#fff" opacity=".8"/><circle cx="175" cy="290" r="7" fill="#fff" opacity=".8"/>`;
+    tail = `<ellipse cx="232" cy="262" rx="16" ry="24" fill="${k.fur}"/>`;
+  } else if (kind === 'bear') {
+    ears = `<circle cx="78" cy="60" r="32" fill="${k.fur}"/><circle cx="222" cy="60" r="32" fill="${k.fur}"/>
+            <circle cx="78" cy="60" r="16" fill="${k.face}"/><circle cx="222" cy="60" r="16" fill="${k.face}"/>`;
+    faceShape = `<ellipse cx="150" cy="168" rx="50" ry="38" fill="${k.face}"/>`;
+    tail = '';
+  }
+  const body = kind === 'tortoise'
+    ? `${back}<ellipse cx="70" cy="320" rx="26" ry="16" fill="${k.fur}"/><ellipse cx="250" cy="320" rx="26" ry="16" fill="${k.fur}"/>`
+    : `<ellipse cx="150" cy="270" rx="85" ry="65" fill="${k.fur}"/><ellipse cx="150" cy="285" rx="50" ry="40" fill="${k.belly}"/>${back}`;
+  const head = kind === 'tortoise'
+    ? `<ellipse cx="150" cy="135" rx="78" ry="72" fill="${k.fur}"/>`
+    : `<circle cx="150" cy="130" r="92" fill="${k.fur}"/>`;
+  return `<svg viewBox="0 -60 300 400" width="100%">
+    ${tail}${body}${ears}${head}${faceShape}
+    <g class="eye"><circle cx="122" cy="125" r="13" fill="#2a1a0c"/><circle cx="126" cy="120" r="4" fill="#fff"/></g>
+    <g class="eye"><circle cx="178" cy="125" r="13" fill="#2a1a0c"/><circle cx="182" cy="120" r="4" fill="#fff"/></g>
+    ${tear}
+    ${kind === 'bear' ? '<ellipse cx="150" cy="155" rx="14" ry="10" fill="#2a1a0c"/>' : kind === 'deer' ? '<ellipse cx="150" cy="158" rx="12" ry="9" fill="#2a1a0c"/>' : '<circle cx="140" cy="158" r="4" fill="#4a2410"/><circle cx="160" cy="158" r="4" fill="#4a2410"/>'}
+    <circle cx="96" cy="160" r="12" fill="#ff9f8a" opacity=".45"/><circle cx="204" cy="160" r="12" fill="#ff9f8a" opacity=".45"/>
+    ${front}
+    <g class="mouth">${mouth}</g>
+  </svg>`;
+}
+function owl() {
+  return `<svg viewBox="0 0 260 300" width="100%">
+    <ellipse cx="130" cy="180" rx="95" ry="110" fill="#8a6a4a"/><ellipse cx="130" cy="205" rx="62" ry="78" fill="#d9c2a0"/>
+    <path d="M45 85 l25 40 l-40 0z M215 85 l-25 40 l40 0z" fill="#8a6a4a"/>
+    <circle cx="92" cy="130" r="40" fill="#fff"/><circle cx="168" cy="130" r="40" fill="#fff"/>
+    <g class="eye"><circle cx="92" cy="132" r="20" fill="#222"/><circle cx="98" cy="125" r="6" fill="#fff"/></g>
+    <g class="eye"><circle cx="168" cy="132" r="20" fill="#222"/><circle cx="174" cy="125" r="6" fill="#fff"/></g>
+    <path class="mouth" d="M118 165 h24 l-12 22z" fill="#f3a712"/>
+    <rect x="70" y="40" width="120" height="16" rx="6" fill="#222"/><rect x="100" y="0" width="60" height="44" rx="6" fill="#222"/>
+  </svg>`;
+}
+
+document.getElementById('father').innerHTML = lion(false);
+document.getElementById('cub').innerHTML = lion(true);
+document.getElementById('father2').innerHTML = lion(false, true);
+document.getElementById('cub2').innerHTML = lion(true, true);
+document.getElementById('owl').innerHTML = owl();
+document.querySelectorAll('.sky-night').forEach(s => { for (let i = 0; i < 40; i++) { const st = document.createElement('div'); st.className = 'star';
+  st.style.left = Math.random() * 720 + 'px'; st.style.top = Math.random() * 600 + 'px'; st.style.animationDelay = Math.random() * 2.4 + 's'; s.prepend(st); } });
+const conf = document.getElementById('confetti'), colors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93'];
+for (let i = 0; i < 60; i++) { const c = document.createElement('div'); c.className = 'confetti';
+  c.style.left = Math.random() * 720 + 'px'; c.style.background = colors[i % 5];
+  c.style.animationDelay = Math.random() * 3 + 's'; c.style.animationDuration = 2 + Math.random() * 2 + 's'; conf.appendChild(c); }
+
+function setup(ep) {
+  document.querySelectorAll('.char.hero').forEach(h => h.innerHTML = animal(ep.hero, h.dataset.mood));
+  const p = ep.problem;
+  document.querySelectorAll('[data-f]').forEach(el => {
+    const f = el.dataset.f;
+    if (f === 'url') el.textContent = '🔒 ' + p.url;
+    else if (f === 'win') el.textContent = ep.win;
+    else el.innerHTML = p[f];
+  });
+  const scr = document.getElementById('toolscreen');
+  ep.tools.forEach(([ic, name, color]) => {
+    const t = document.createElement('div'); t.className = 'tile';
+    t.innerHTML = `<div class="ic" style="background:${color}">${ic}</div>${name}`; scr.appendChild(t);
+  });
+  const r = document.createElement('div'); r.className = 'result'; r.id = 'counter'; scr.appendChild(r);
+}
+function counterText(c, p) {
+  if (c.text) return p >= 1 ? c.text : '⏳';
+  const v = Math.round(c.from + (c.to - c.from) * p);
+  if (c.unit === 'kb') return (v >= 1024 ? (v / 1024).toFixed(1) + ' MB' : v + ' KB') + (p >= 1 ? ' ✅' : '');
+  return v + ' WPM' + (p >= 1 ? ' ✅' : '');
+}
+
+const WHO = { father: 'నాన్న సింహం', cub: 'పిల్ల సింహం' };
+window.start = (T, ep) => {
+  setup(ep);
+  document.getElementById('stage').classList.add('on');
+  const t0 = performance.now();
+  (function tick() {
+    const t = (performance.now() - t0) / 1000;
+    let cur = T.lines[0];
+    for (const l of T.lines) if (t >= l.start - 0.3) cur = l;
+    const speaking = T.lines.find(l => t >= l.start && t <= l.end);
+    document.querySelectorAll('.scene').forEach(s => s.classList.toggle('show', s.dataset.scene === cur.scene));
+    const who = document.getElementById('who'); who.textContent = WHO[cur.who]; who.className = cur.who;
+    document.getElementById('line').textContent = cur.text;
+    document.getElementById('father').classList.toggle('talk', !!(speaking && speaking.who === 'father' && cur.scene === 'night'));
+    document.getElementById('cub').classList.toggle('talk', !!(speaking && speaking.who === 'cub'));
+    document.getElementById('owl').classList.toggle('talk', !!(speaking && cur.scene === 'owl'));
+    if (cur.scene === 'tools') {
+      const p = Math.min(1, Math.max(0, (t - cur.start - 0.8) / 3));
+      document.getElementById('counter').textContent = counterText(ep.counter, p);
+    }
+    if (t < T.total) requestAnimationFrame(tick);
+  })();
+};
+</script>
+</body>
+</html>
