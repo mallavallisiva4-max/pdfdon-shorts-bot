@@ -20,6 +20,35 @@ def configured():
     return bool(os.environ.get("GEMINI_API_KEY"))
 
 
+def ask_search(system, prompt):
+    """Gemini with Google Search. Returns (text, [source titles/uris]) or (None, [])."""
+    if not configured():
+        return None, []
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"],
+                          http_options=types.HttpOptions(timeout=180_000))
+    config = types.GenerateContentConfig(system_instruction=system, max_output_tokens=12000,
+                                         tools=[types.Tool(google_search=types.GoogleSearch())])
+    for model in MODELS:
+        for attempt in range(1, TRIES + 1):
+            try:
+                r = client.models.generate_content(model=model, contents=prompt, config=config)
+                sources = []
+                try:
+                    for ch in r.candidates[0].grounding_metadata.grounding_chunks or []:
+                        if ch.web:
+                            sources.append(f"{ch.web.title or ''} {ch.web.uri or ''}".strip())
+                except (AttributeError, IndexError, TypeError):
+                    pass
+                print(f"  searched by Gemini ({model}), {len(sources)} sources")
+                return r.text, sources
+            except errors.APIError as e:
+                print(f"  Gemini {model} error {e.code} (try {attempt}): {str(e.message)[:160]}")
+                if e.code not in BUSY or attempt == TRIES:
+                    break
+                time.sleep(20 * attempt)
+    return None, []
+
+
 def ask_json(system, prompt, schema):
     """Returns the parsed JSON answer, or None when Gemini is not set up or did not answer."""
     if not configured():
