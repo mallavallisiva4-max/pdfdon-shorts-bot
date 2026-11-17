@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="te">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden;
+    font-family: "Nirmala UI", "Noto Sans Telugu", "Noto Sans", sans-serif;
+    background: linear-gradient(160deg, #0d3b66 0%, #1e6091 45%, #f4f6fb 45.1%); }
+  .head { height: 285px; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .head b { font-size: 72px; font-weight: 900; }
+  .head span { font-size: 36px; font-weight: 700; color: #ffd166; margin-top: 10px; }
+  img { display: block; width: 1080px; height: 1350px; }
+  .tail { height: 285px; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 800; color: #0d3b66; text-align: center; padding: 0 40px; }
+</style>
+</head>
+<body>
+  <div class="head"><b>📢 ఈ రోజు ఉద్యోగం</b><span id="when"></span></div>
+  <img id="card">
+  <div class="tail">🔔 రోజూ కొత్త ఉద్యోగాల కోసం Subscribe చేయండి</div>
+<script>
+  window.fill = (c) => { document.getElementById('card').src = c.card; document.getElementById('when').textContent = c.when; };
+</script>
+</body>
+</html>
