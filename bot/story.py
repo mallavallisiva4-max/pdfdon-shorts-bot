@@ -4,8 +4,9 @@ Picks the next episode from stories/episodes.json that is not in state/stories_d
 Telugu voices (Edge TTS), plays stories/story.html in Chromium while recording it, joins the two with
 ffmpeg, then uploads to YouTube (public) and Instagram.
 
-    python -m bot.story            # make + upload the next episode
-    python -m bot.story --dry-run  # make only
+    python -m bot.story                      # Short: make + upload the next episode
+    python -m bot.story --kind long          # long: next 3 episodes joined into one 16:9 video
+    python -m bot.story --dry-run            # make only
     python -m bot.story --id deer-ocr
 """
 import argparse
@@ -20,7 +21,8 @@ import edge_tts
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 STORIES = ROOT / "stories"
-DONE = ROOT / "state" / "stories_done.json"
+DONE = ROOT / "state" / "stories_done.json"            # episodes already posted as Shorts
+DONE_LONG = ROOT / "state" / "stories_long_done.json"  # episodes already used in a long video
 OUT = ROOT / "out_story"
 VOICES = {
     "father": dict(voice="te-IN-MohanNeural", rate="-8%", pitch="-6Hz"),
@@ -173,15 +175,12 @@ def _script(ep):
     return {"title": title[:100], "description": desc, "tags": tags}
 
 
-def _pick(wanted):
-    episodes = json.loads((STORIES / "episodes.json").read_text(encoding="utf-8"))
-    done = json.loads(DONE.read_text(encoding="utf-8")) if DONE.exists() else []
-    if wanted:
-        return next(e for e in episodes if e["id"] == wanted), done
-    for e in episodes:
-        if e["id"] not in done:
-            return e, done
-    return None, done
+def _episodes():
+    return json.loads((STORIES / "episodes.json").read_text(encoding="utf-8"))
+
+
+def _load(path):
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
 
 
 def _output(key, value):
@@ -190,37 +189,101 @@ def _output(key, value):
             f.write(f"{key}={value}\n")
 
 
+def _build(ep, out):
+    """Makes one episode's vertical video in folder `out`; returns the mp4 path."""
+    global OUT
+    OUT = out
+    OUT.mkdir(parents=True, exist_ok=True)
+    print(f"Episode: {ep['id']} - {ep['title']}")
+    timeline = asyncio.run(_voices(ep))
+    print(f"  voice: {timeline['total']} s")
+    return _record(timeline, ep)
+
+
+def _stamp(sec):
+    return f"{int(sec // 60)}:{int(sec % 60):02d}"
+
+
+def _make_long(eps, videos, out):
+    """Joins the episodes into one 16:9 video: the vertical story in the middle on a blurred copy of itself."""
+    parts = []
+    for i, v in enumerate(videos):
+        wide = out / f"wide{i}.mp4"
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(v), "-filter_complex",
+                        "[0:v]scale=1920:-2,crop=1920:1080,boxblur=30:3,eq=brightness=-0.12[bg];"
+                        "[0:v]scale=-2:1080[fg];[bg][fg]overlay=(W-w)/2:0,fps=30[v]",
+                        "-map", "[v]", "-map", "0:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "21",
+                        "-c:a", "aac", "-b:a", "160k", "-ar", "48000", str(wide)], check=True)
+        parts.append(wide)
+    inputs = sum((["-i", str(p)] for p in parts), [])
+    joined = "".join(f"[{i}:v][{i}:a]" for i in range(len(parts)))
+    video = out / "long.mp4"
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *inputs, "-filter_complex",
+                    f"{joined}concat=n={len(parts)}:v=1:a=1[v][a]", "-map", "[v]", "-map", "[a]",
+                    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "21", "-c:a", "aac", "-b:a", "160k", str(video)], check=True)
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", "3", "-i", str(video), "-frames:v", "1",
+                    "-vf", "scale=1280:720", str(out / "thumb.png")], check=True)
+    chapters, t = [], 0.0
+    for ep, v in zip(eps, videos):
+        chapters.append(f"{_stamp(t)} {ep['emoji']} {ep['title']}")
+        t += _duration(v)
+    names = ", ".join(e["hero_name"] for e in eps)
+    script = {
+        "title": f"🦁 సింహం నాన్న కథలు: {names} | pdfdon.com"[:100],
+        "description": ("నాన్న సింహం పిల్ల సింహానికి చెప్పిన కథలు 🦁🌙 ప్రతి కథలో ఒక ఫ్రీ pdfdon.com టూల్!\n\n"
+                        + "\n".join(chapters) + "\n\n"
+                        + "\n\n".join(f"{e['emoji']} {e['hero_name']}:\n{e['tool_line']}" for e in eps)
+                        + "\n\n💸 అంతా ఫ్రీ • యాప్ install అక్కర్లేదు • ఫైల్స్ మీ ఫోన్‌లోనే\n👉 https://pdfdon.com\n\n"
+                        "#PDFDonTelugu #TeluguStory #TeluguKathalu #pdfdon"),
+        "tags": ["pdfdon", "pdfdon telugu", "telugu stories", "telugu kathalu", "animal stories telugu",
+                 "simham kathalu", "kids stories telugu", "telugu moral stories", "telugu tech"],
+    }
+    return video, script
+
+
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--kind", choices=["short", "long"], default="short")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--id", default="")
     args = ap.parse_args()
+    episodes = _episodes()
 
-    ep, done = _pick(args.id)
-    if not ep:
-        print("All story episodes are used - add more to stories/episodes.json")
-        return
-    print(f"Episode: {ep['id']} - {ep['title']}")
-    OUT.mkdir(exist_ok=True)
-    timeline = asyncio.run(_voices(ep))
-    print(f"  voice: {timeline['total']} s")
-    video = _record(timeline, ep)
-    script = _script(ep)
-    (OUT / "script.json").write_text(json.dumps(script, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(f"  video: {video}")
+    if args.kind == "short":
+        done = _load(DONE)
+        ep = next((e for e in episodes if e["id"] == args.id), None) if args.id else \
+            next((e for e in episodes if e["id"] not in done), None)
+        if not ep:
+            print("All story episodes are used - add more to stories/episodes.json")
+            return
+        out = ROOT / "out_story"
+        video = _build(ep, out)
+        script = _script(ep)
+    else:
+        done = _load(DONE_LONG)
+        eps = [e for e in episodes if e["id"] not in done][:3]
+        if len(eps) < 2:
+            print("Not enough unused episodes for a long video - add more to stories/episodes.json")
+            return
+        out = ROOT / "out_story"
+        videos = [_build(e, out / f"ep{i}") for i, e in enumerate(eps)]
+        video, script = _make_long(eps, videos, out)
+    (out / "script.json").write_text(json.dumps(script, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"  video: {video} ({_duration(video):.0f} s)")
     if args.dry_run:
         print("Dry run - not uploading")
         return
 
     from . import instagram, youtube_upload
-    video_id = youtube_upload.upload(video, OUT / "thumb.png", script, privacy="public")
-    print(f"YouTube: https://youtube.com/shorts/{video_id}")
-    if ep["id"] not in done:
-        done.append(ep["id"])
-    DONE.write_text(json.dumps(done, ensure_ascii=False, indent=1), encoding="utf-8")
+    thumb = (out / "thumb.png") if args.kind == "long" else (OUT / "thumb.png")
+    video_id = youtube_upload.upload(video, thumb, script, privacy="public")
+    print(f"YouTube: https://youtu.be/{video_id}")
+    ids = [ep["id"]] if args.kind == "short" else [e["id"] for e in eps]
+    done += [i for i in ids if i not in done]
+    (DONE if args.kind == "short" else DONE_LONG).write_text(json.dumps(done, ensure_ascii=False, indent=1), encoding="utf-8")
     _output("saved", "true")
     _output("video_id", video_id)
-    if instagram.configured():
+    if args.kind == "short" and instagram.configured():
         try:
             print(f"Instagram: {instagram.publish(video, script)}")
         except Exception as e:  # YouTube is already done; do not fail the run over the Reel
