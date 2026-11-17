@@ -80,7 +80,85 @@ def _key(j):
     return f"{_host(j['official_url'])}|{j['posts']}|{j['last_date']}"
 
 
+EXTRACT_SYSTEM = """You read an official Indian government recruitment notification (text from its PDF) and
+pull out the key facts for a Telugu job card. Use ONLY what the text says; never guess.
+- posts: total number of vacancies as digits (sum if the text gives a total; "" if not stated)
+- last_date: last date for submitting the online application, as YYYY-MM-DD ("" if not stated)
+- post: post name(s) in simple Telugu, short (keep English abbreviations in brackets)
+- qual: educational qualification in simple Telugu, one short line
+- age: age limit in Telugu, short ("" if not stated)
+- is_recruitment: false if this is not a new recruitment notification (results, corrigendum, exam schedule, etc.)
+Write the Telugu in your own words."""
+
+EXTRACT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "is_recruitment": {"type": "boolean"},
+        "posts": {"type": "string"},
+        "last_date": {"type": "string"},
+        "post": {"type": "string"},
+        "qual": {"type": "string"},
+        "age": {"type": "string"},
+    },
+    "required": ["is_recruitment", "posts", "last_date", "post", "qual", "age"],
+}
+
+
+def _date_in_text(iso, text):
+    """The date must really be printed in the notification (dd/mm/yyyy, dd-mm-yyyy, dd.mm.yyyy)."""
+    d = dt.date.fromisoformat(iso)
+    pats = [f"{d.day:02d}{s}{d.month:02d}{s}{d.year}" for s in "/-."] + [f"{d.day}{s}{d.month}{s}{d.year}" for s in "/-."]
+    return any(p in text for p in pats)
+
+
 def find_job(done):
+    """First still-open official notification (APPSC / TGPSC) not posted before, with checked facts."""
+    from . import gemini, job_sources
+    today = _today()
+    tried = 0
+    for c in job_sources.candidates():
+        key = f"{c['source']}:{c['id']}"
+        if key in done:
+            continue
+        if c["end_date"]:
+            try:
+                if dt.datetime.strptime(c["end_date"], "%d/%m/%Y").date() <= today:
+                    continue  # closed (TGPSC gives the date in its list)
+            except ValueError:
+                pass
+        if tried >= 6:
+            break
+        tried += 1
+        print(f"  checking {key}: {c['title'][:90]}")
+        try:
+            text = job_sources.pdf_text(c["url"])
+        except Exception as e:
+            print(f"    PDF not readable ({type(e).__name__})"); continue
+        if len(text) < 500:
+            print("    PDF has no text (scanned) - skipped"); continue
+        facts = gemini.ask_json(EXTRACT_SYSTEM, f"Notification title: {c['title']}\n\n{text}", EXTRACT_SCHEMA)
+        if not facts or not facts.get("is_recruitment"):
+            print("    not a recruitment notification / no answer"); continue
+        posts = str(facts.get("posts", "")).replace(",", "").strip()
+        last = str(facts.get("last_date", ""))[:10]
+        if not posts.isdigit() or int(posts) < 1:
+            print("    vacancies not stated - skipped"); continue
+        if not re.search(rf"(?<!\d){posts}(?!\d)", text.replace(",", "")):
+            print(f"    {posts} not found in the PDF - skipped"); continue
+        try:
+            if dt.date.fromisoformat(last) <= today + dt.timedelta(days=1):
+                print(f"    last date {last} passed or too close"); continue
+        except ValueError:
+            print("    no valid last date - skipped"); continue
+        if not _date_in_text(last, text):
+            print(f"    last date {last} not found in the PDF - skipped"); continue
+        return {"key": key, "org": c["org"], "posts": posts, "post": facts["post"], "qual": facts["qual"],
+                "age": facts.get("age", ""), "last_date": last, "official_url": c["site"], "pdf": c["url"]}
+    return None
+
+
+def _old_find_job(done):
+    """Unused: Gemini + Google Search (needs a billed key). Kept for later."""
     from . import gemini
     today = _today()
     text, sources = gemini.ask_search(SYSTEM.format(today=today.isoformat()),
@@ -181,7 +259,8 @@ def texts(job):
     title = f"📢 {job['org']}: {job['posts']} ఉద్యోగాలు | చివరి తేదీ {date} #Shorts"
     desc = (f"{job['org']}\n💼 పోస్టు: {job['post']}\n👥 ఖాళీలు: {job['posts']}\n🎓 అర్హత: {job['qual']}\n"
             + (f"🎂 వయసు: {job['age']}\n" if job.get("age") else "")
-            + f"⏰ చివరి తేదీ: {date}\n🌐 అధికారిక వెబ్‌సైట్: {job['official_url']}\n\n"
+            + f"⏰ చివరి తేదీ: {date}\n🌐 అధికారిక వెబ్‌సైట్: {job['official_url']}\n"
+            + (f"📄 అధికారిక notification: {job['pdf']}\n" if job.get("pdf") else "") + "\n"
             "⚠️ Apply చేసే ముందు అధికారిక notification పూర్తిగా చదవండి. ఉద్యోగం కోసం ఎవరికీ డబ్బులు కట్టకండి.\n\n"
             "#TeluguJobs #GovtJobs #APJobs #TSJobs #JobNotification #Shorts")
     tags = ["telugu jobs", "govt jobs", "ap jobs", "ts jobs", "job notification", "sarkari naukri telugu"]
@@ -215,7 +294,7 @@ def main():
     from . import instagram, youtube_upload
     video_id = youtube_upload.upload(video, card, script, privacy="public")
     print(f"YouTube: https://youtube.com/shorts/{video_id}")
-    done.append(_key(job))
+    done.append(job.get("key") or _key(job))
     DONE.write_text(json.dumps(done, ensure_ascii=False, indent=1), encoding="utf-8")
     _output("saved", "true")
     if instagram.configured():
