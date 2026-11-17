@@ -67,9 +67,7 @@ def crickets(sec=12.0):
             for k in range(rng.integers(3, 5)):          # 3-4 pulses make one chirp
                 place(out, pulse * amp * rng.uniform(.8, 1), at + k * 0.032)
             at += period * rng.uniform(.85, 1.15)
-    wind = lowpass(rng.normal(0, 1, len(out)), 350) * 0.6
-    wind *= 0.6 + 0.4 * np.sin(2 * np.pi * 0.11 * t(sec))
-    out = out * 0.5 + wind
+    # no wind noise: it sounded like hiss/blur under the voice
     fade = int(0.3 * SR)                                   # seamless loop
     out[:fade] = out[:fade] * np.linspace(0, 1, fade) + out[-fade:] * np.linspace(1, 0, fade)
     return out[:-fade]
@@ -99,8 +97,6 @@ def birds(sec=12.0):
             for k in range(2):
                 place(out, bird_note(2600, 4800, 0.09, .9), at + k * 0.16)
         at += rng.uniform(0.7, 1.8)
-    breeze = lowpass(rng.normal(0, 1, len(out)), 500) * 0.5
-    out = out * 0.6 + breeze
     fade = int(0.3 * SR)
     out[:fade] = out[:fade] * np.linspace(0, 1, fade) + out[-fade:] * np.linspace(1, 0, fade)
     return out[:-fade]
@@ -112,7 +108,7 @@ def hoot():
         tt = t(dur)
         freq = f * (1 + 0.04 * np.sin(2 * np.pi * 5 * tt)) * np.linspace(1.03, .96, len(tt))
         ph = 2 * np.pi * np.cumsum(freq) / SR
-        tone = np.sin(ph) + 0.18 * np.sin(2 * ph) + 0.05 * rng.normal(0, 1, len(tt))
+        tone = np.sin(ph) + 0.18 * np.sin(2 * ph)
         return tone * env(len(tt), .06, .18)
     out = np.zeros(int(1.9 * SR))
     place(out, one(0.42, 390), 0.0)
@@ -205,6 +201,29 @@ def lullaby():
     return out[:loop]
 
 
+def newsbed():
+    """Light, positive loop for the job Shorts: soft plucked chords I-V-vi-IV and a gentle tick (original)."""
+    bpm, bars = 100, 8
+    beat = 60 / bpm
+    chords = [[261.63, 329.63, 392.0], [196.0, 246.94, 293.66], [220.0, 261.63, 329.63], [174.61, 220.0, 261.63]]
+    out = np.zeros(int(bars * 4 * beat * SR) + SR)
+    def pluck(f, dur, amp):
+        tt = t(dur)
+        return (np.sin(2 * np.pi * f * tt) + .35 * np.sin(4 * np.pi * f * tt)) * np.exp(-tt * 4) * amp
+    for bar in range(bars):
+        ch = chords[bar % 4]
+        for b in range(4):
+            at = (bar * 4 + b) * beat
+            for i, f in enumerate(ch):
+                place(out, pluck(f * (2 if b % 2 else 1), 0.9, .35), at + i * 0.03)
+            place(out, pluck(ch[0] / 2, 1.2, .5) if b == 0 else np.zeros(1), at)
+            tick = rng.normal(0, 1, int(0.03 * SR)) * np.exp(-t(0.03) * 120) * .15
+            place(out, tick, at + beat / 2)
+    loop = int(bars * 4 * beat * SR)
+    out[:SR] += out[loop: loop + SR]
+    return out[:loop]
+
+
 if __name__ == "__main__":
     save("crickets", crickets(), .8)
     save("birds", birds(), .8)
@@ -217,3 +236,4 @@ if __name__ == "__main__":
     save("sparkle", sparkle(), .6)
     save("snore", snore(), .7)
     save("lullaby", lullaby(), .8)
+    save("newsbed", newsbed(), .7)
