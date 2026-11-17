@@ -32,24 +32,24 @@ VOICES = {
 GAP = 0.45
 SFX = STORIES / "sfx"
 # background sound for each scene: (file, volume)
-BEDS = {
-    "night": [("crickets", 0.30), ("lullaby", 0.13)],
-    "owl": [("crickets", 0.30), ("lullaby", 0.10)],
-    "hero": [("birds", 0.28), ("lullaby", 0.08)],
-    "error": [("birds", 0.20)],
-    "tools": [("lullaby", 0.14)],
-    "free": [("lullaby", 0.14)],
-    "success": [("birds", 0.28), ("lullaby", 0.10)],
-    "end": [("crickets", 0.30), ("lullaby", 0.16)],
+BEDS = {  # kept low and clean so the voice stays clear
+    "night": [("crickets", 0.10), ("lullaby", 0.07)],
+    "owl": [("crickets", 0.10)],
+    "hero": [("birds", 0.09)],
+    "error": [],
+    "tools": [("lullaby", 0.07)],
+    "free": [("lullaby", 0.07)],
+    "success": [("birds", 0.09)],
+    "end": [("crickets", 0.10), ("lullaby", 0.09)],
 }
 # one-off sounds, seconds after the scene starts (these match the animations in story.html)
 HITS = {
-    "error": [("buzz", 1.0, 0.45)],
-    "owl": [("hoot", 0.1, 0.55)],
-    "tools": [("pop", 0.0, 0.5), ("pop", 1.4, 0.5), ("pop", 2.6, 0.5), ("ding", 3.8, 0.45)],
-    "free": [("pop", 0.0, 0.5), ("pop", 1.4, 0.5), ("pop", 3.0, 0.5)],
-    "success": [("tada", 0.1, 0.5), ("sparkle", 0.4, 0.4)],
-    "end": [("snore", 1.2, 0.35)],
+    "error": [("buzz", 1.0, 0.25)],
+    "owl": [("hoot", 0.1, 0.4)],
+    "tools": [("pop", 0.0, 0.35), ("pop", 1.4, 0.35), ("pop", 2.6, 0.35), ("ding", 3.8, 0.3)],
+    "free": [("pop", 0.0, 0.35), ("pop", 1.4, 0.35), ("pop", 3.0, 0.35)],
+    "success": [("tada", 0.1, 0.35), ("sparkle", 0.4, 0.25)],
+    "end": [],
 }
 
 
@@ -121,11 +121,6 @@ def _mix_sounds(timeline):
             filters.append(f"[{n}:a]atrim=0:{dur:.2f},asetpts=PTS-STARTPTS,volume={vol},"
                            f"afade=t=in:d=0.4,afade=t=out:st={max(0, dur - 0.5):.2f}:d=0.5,adelay={ms}|{ms}[b{n}]")
             labels.append(f"[b{n}]"); n += 1
-        if i > 0:  # whoosh on every scene change
-            inputs += ["-i", str(SFX / "whoosh.mp3")]
-            ms = int(max(0, start - 0.15) * 1000)
-            filters.append(f"[{n}:a]volume=0.35,adelay={ms}|{ms}[h{n}]")
-            labels.append(f"[h{n}]"); n += 1
         for name, at, vol in HITS.get(scene, []):
             if at < dur:
                 inputs += ["-i", str(SFX / f"{name}.mp3")]
