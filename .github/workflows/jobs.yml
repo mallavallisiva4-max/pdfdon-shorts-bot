@@ -1,0 +1,82 @@
+name: Daily Jobs
+
+# One confirmed government job notification every evening: card to Instagram, short video to YouTube.
+on:
+  schedule:
+    - cron: "30 12 * * *"   # 12:30 UTC = 6:00 PM India time, every day
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Test only - find and make, do not post"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write   # temporary GitHub Release for the Instagram image, and the state file
+
+concurrency:
+  group: jobs
+  cancel-in-progress: false
+
+jobs:
+  job:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install ffmpeg and Telugu fonts
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ffmpeg fonts-noto-core fonts-noto-color-emoji
+
+      - name: Install Python packages and browser
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Find, make and post
+        id: run
+        env:
+          PYTHONUNBUFFERED: "1"
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: |
+          if [ "$DRY_RUN" = "true" ]; then
+            python -m bot.jobs --dry-run
+          else
+            python -m bot.jobs
+          fi
+
+      - name: Keep the files for 14 days
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: job
+          path: |
+            out_jobs/job.jpg
+            out_jobs/job.mp4
+            out_jobs/post.json
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Remember the job
+        if: steps.run.outputs.saved == 'true'
+        run: |
+          git config user.name "pdfdon-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/jobs_done.json
+          git commit -m "Job posted"
+          git pull --rebase -q
+          git push

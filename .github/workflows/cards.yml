@@ -2,8 +2,7 @@ name: Instagram Cards
 
 # One Way2News-style tip card (pdfdon tool picture + Telugu text, 1080x1350) to Instagram every evening.
 on:
-  schedule:
-    - cron: "30 12 * * *"   # 12:30 UTC = 6:00 PM India time, every day
+  # Schedule stopped 2026-11-17: the 6 PM slot is now "Daily Jobs" (jobs.yml). Run by hand only.
   workflow_dispatch:
     inputs:
       dry_run:
