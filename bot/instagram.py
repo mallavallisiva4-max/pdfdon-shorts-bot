@@ -107,6 +107,34 @@ def _unhost(tag):
         subprocess.run(["gh", "release", "delete", tag, "--yes", "--cleanup-tag"], check=False)
 
 
+def publish_image(image, text):
+    """Posts one JPEG as a feed post. Instagram only fetches images from a public URL, so the file
+    is put on a temporary GitHub Release and deleted afterwards. Returns the permalink."""
+    token = _refresh(os.environ["IG_ACCESS_TOKEN"])
+    user = os.environ["IG_USER_ID"]
+    repo = os.environ["GITHUB_REPOSITORY"]
+    tag = f"igimg-{os.environ.get('GITHUB_RUN_ID', int(time.time()))}"
+    subprocess.run(["gh", "release", "create", tag, str(image), "--prerelease",
+                    "--title", "Instagram image (temporary)", "--notes", "Deleted after the post is published."],
+                   check=True)
+    try:
+        url = f"https://github.com/{repo}/releases/download/{tag}/{image.name}"
+        container = _call(token, "POST", f"{user}/media", image_url=url, caption=text[:CAPTION_MAX])["id"]
+        for _ in range(20):
+            status = _call(token, "GET", container, fields="status_code").get("status_code")
+            if status in (None, "FINISHED"):
+                break
+            if status in ("ERROR", "EXPIRED"):
+                raise RuntimeError(f"Instagram could not process the image ({status})")
+            time.sleep(5)
+        media = _call(token, "POST", f"{user}/media_publish", creation_id=container)["id"]
+        link = _call(token, "GET", media, fields="permalink").get("permalink", "")
+        print(f"  Instagram post published: {link}")
+        return link
+    finally:
+        _unhost(tag)
+
+
 def publish(video, script):
     """Returns the Reel's permalink. Raises RuntimeError when Instagram refuses it."""
     token = _refresh(os.environ["IG_ACCESS_TOKEN"])
