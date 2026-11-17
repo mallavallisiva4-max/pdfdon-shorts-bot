@@ -27,6 +27,14 @@
   .night .tree { background: #12261b; } .night .tree::before { background: #183323; }
 
   .char { position: absolute; transform-origin: 50% 100%; }
+  /* 3D character pictures: base mood picture, plus a "talk" picture that flickers on while speaking */
+  .char .pic { position: relative; width: 100%; filter: drop-shadow(0 14px 18px rgba(0,0,0,.28)); }
+  .char .pic img { display: block; width: 100%; }
+  .char .pic img.t { position: absolute; inset: 0; opacity: 0; }
+  .char.talk .pic img.t { animation: flap .32s steps(1) infinite; }
+  @keyframes flap { 0% { opacity: 1; } 50% { opacity: 0; } }
+  .char .pic { animation: breathe 3s ease-in-out infinite; transform-origin: 50% 100%; }
+  @keyframes breathe { 50% { transform: scale(1.015, .985); } }
   .char.talk { animation: bob .5s ease-in-out infinite; }
   @keyframes bob { 50% { transform: translateY(-8px) scale(1.02); } }
   .mouth { transform-origin: center; transform-box: fill-box; }
@@ -289,11 +297,17 @@ function owl() {
   </svg>`;
 }
 
-document.getElementById('father').innerHTML = lion(false);
-document.getElementById('cub').innerHTML = lion(true);
-document.getElementById('father2').innerHTML = lion(false, true);
-document.getElementById('cub2').innerHTML = lion(true, true);
-document.getElementById('owl').innerHTML = owl();
+// 3D characters (rendered in Blender: chars/<name>_<mood>.webp). Old SVG drawings above are kept as a fallback only.
+function pic(name, mood) {
+  const base = `chars/${name}_${mood || 'neutral'}.webp`;
+  const talk = mood === 'sleep' ? '' : `<img class="t" src="chars/${name}_talk.webp" alt="">`;
+  return `<div class="pic"><img class="n" src="${base}" alt="">${talk}</div>`;
+}
+document.getElementById('father').innerHTML = pic('lion_dad');
+document.getElementById('cub').innerHTML = pic('lion_cub');
+document.getElementById('father2').innerHTML = pic('lion_dad', 'sleep');
+document.getElementById('cub2').innerHTML = pic('lion_cub', 'sleep');
+document.getElementById('owl').innerHTML = pic('owl');
 document.querySelectorAll('.sky-night').forEach(s => { for (let i = 0; i < 40; i++) { const st = document.createElement('div'); st.className = 'star';
   st.style.left = Math.random() * 720 + 'px'; st.style.top = Math.random() * 600 + 'px'; st.style.animationDelay = Math.random() * 2.4 + 's'; s.prepend(st); } });
 const conf = document.getElementById('confetti'), colors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93'];
@@ -302,7 +316,7 @@ for (let i = 0; i < 60; i++) { const c = document.createElement('div'); c.classN
   c.style.animationDelay = Math.random() * 3 + 's'; c.style.animationDuration = 2 + Math.random() * 2 + 's'; conf.appendChild(c); }
 
 function setup(ep) {
-  document.querySelectorAll('.char.hero').forEach(h => h.innerHTML = animal(ep.hero, h.dataset.mood));
+  document.querySelectorAll('.char.hero').forEach(h => h.innerHTML = KINDS[ep.hero] ? pic(ep.hero, h.dataset.mood) : animal(ep.hero, h.dataset.mood));
   const p = ep.problem;
   document.querySelectorAll('[data-f]').forEach(el => {
     const f = el.dataset.f;
