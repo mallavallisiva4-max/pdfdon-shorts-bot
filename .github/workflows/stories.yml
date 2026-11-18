@@ -6,6 +6,9 @@ name: Lion Stories
 # Every run first checks whether today's (India date) story is already up; if so it does nothing.
 # So a missed 10 AM video still goes out the same day, before midnight, and never twice.
 on:
+  push:   # the laptop's 9:50 AM task writes this file (GitHub's timer alone has skipped runs)
+    branches: [main]
+    paths: [state/story_tick.json]
   schedule:
     - cron: "7 4 * * 1-5"     # 9:37 AM IST - main run (GitHub's delay lands it near 10 AM)
     - cron: "47 7 * * 1-5"    # 1:17 PM IST - backup
@@ -47,7 +50,9 @@ jobs:
       - name: Skip if today's story is already up
         id: check
         run: |
-          if [ "${{ github.event_name }}" != "schedule" ]; then exit 0; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then exit 0; fi
+          # automatic run (timer or laptop): weekdays only, once per India day
+          if [ "$(TZ=Asia/Kolkata date +%u)" -gt 5 ]; then echo "Weekend - no story."; echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           midnight=$(TZ=Asia/Kolkata date -d "today 00:00" +%s)
           last=$(git log -1 --grep='Story uploaded' --format=%ct)
           if [ -n "$last" ] && [ "$last" -ge "$midnight" ]; then
@@ -87,7 +92,7 @@ jobs:
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
           GH_TOKEN: ${{ github.token }}
-          KIND: ${{ github.event_name == 'schedule' && steps.check.outputs.kind || inputs.kind }}
+          KIND: ${{ github.event_name != 'workflow_dispatch' && steps.check.outputs.kind || inputs.kind }}
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
           EPISODE: ${{ inputs.episode }}
         run: |

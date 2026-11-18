@@ -4,6 +4,9 @@ name: Daily Jobs
 # GitHub sometimes starts scheduled runs late or skips them, so there are backup runs later in the evening.
 # Every run first checks whether a job was already posted today (India date); if so it does nothing.
 on:
+  push:   # the laptop's 5:30 PM task sends AP/TS notifications into this file; post right after
+    branches: [main]
+    paths: [state/ap_inbox.json]
   schedule:
     - cron: "13 12 * * *"   # 5:43 PM IST - main run (after the laptop's 5:30 AP fetch; lands near 6 PM)
     - cron: "37 14 * * *"   # 8:07 PM IST - backup
@@ -35,7 +38,7 @@ jobs:
       - name: Skip if today's job is already posted
         id: check
         run: |
-          if [ "${{ github.event_name }}" != "schedule" ]; then exit 0; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then exit 0; fi
           midnight=$(TZ=Asia/Kolkata date -d "today 00:00" +%s)
           last=$(git log -1 --grep='Job posted' --format=%ct)
           if [ -n "$last" ] && [ "$last" -ge "$midnight" ]; then
