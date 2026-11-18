@@ -3,7 +3,7 @@ name: Daily Jobs
 # One confirmed government job notification every evening: card to Instagram, short video to YouTube.
 on:
   schedule:
-    - cron: "30 12 * * *"   # 12:30 UTC = 6:00 PM India time, every day
+    - cron: "13 12 * * *"   # 5:43 PM India time (after the laptop's 5:30 AP fetch); GitHub's usual delay lands it near 6 PM
   workflow_dispatch:
     inputs:
       dry_run:
