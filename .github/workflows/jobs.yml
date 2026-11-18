@@ -1,9 +1,14 @@
 name: Daily Jobs
 
 # One confirmed government job notification every evening: card to Instagram, short video to YouTube.
+# GitHub sometimes starts scheduled runs late or skips them, so there are backup runs later in the evening.
+# Every run first checks whether a job was already posted today (India date); if so it does nothing.
 on:
   schedule:
-    - cron: "13 12 * * *"   # 5:43 PM India time (after the laptop's 5:30 AP fetch); GitHub's usual delay lands it near 6 PM
+    - cron: "13 12 * * *"   # 5:43 PM IST - main run (after the laptop's 5:30 AP fetch; lands near 6 PM)
+    - cron: "37 14 * * *"   # 8:07 PM IST - backup
+    - cron: "19 16 * * *"   # 9:49 PM IST - backup
+    - cron: "23 17 * * *"   # 10:53 PM IST - last backup, still before midnight
   workflow_dispatch:
     inputs:
       dry_run:
@@ -24,24 +29,41 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 100
+
+      - name: Skip if today's job is already posted
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then exit 0; fi
+          midnight=$(TZ=Asia/Kolkata date -d "today 00:00" +%s)
+          last=$(git log -1 --grep='Job posted' --format=%ct)
+          if [ -n "$last" ] && [ "$last" -ge "$midnight" ]; then
+            echo "Today's job is already posted - nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: actions/setup-python@v5
+        if: steps.check.outputs.skip != 'true'
         with:
           python-version: "3.12"
           cache: pip
 
       - name: Install ffmpeg and Telugu fonts
+        if: steps.check.outputs.skip != 'true'
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q ffmpeg fonts-noto-core fonts-noto-color-emoji
 
       - name: Install Python packages and browser
+        if: steps.check.outputs.skip != 'true'
         run: |
           pip install -r requirements.txt
           python -m playwright install --with-deps chromium
 
       - name: Find, make and post
         id: run
+        if: steps.check.outputs.skip != 'true'
         env:
           PYTHONUNBUFFERED: "1"
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -60,7 +82,7 @@ jobs:
           fi
 
       - name: Keep the files for 14 days
-        if: always()
+        if: always() && steps.check.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: job
