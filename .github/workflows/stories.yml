@@ -53,6 +53,8 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then exit 0; fi
           # automatic run (timer or laptop): weekdays only, once per India day
           if [ "$(TZ=Asia/Kolkata date +%u)" -gt 5 ]; then echo "Weekend - no story."; echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          # GitHub sometimes starts last night's backups after midnight; never post in the night (before 9 AM IST)
+          if [ "$(TZ=Asia/Kolkata date +%-H)" -lt 9 ]; then echo "Before 9 AM India time - not posting now."; echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           midnight=$(TZ=Asia/Kolkata date -d "today 00:00" +%s)
           last=$(git log -1 --grep='Story uploaded' --format=%ct)
           if [ -n "$last" ] && [ "$last" -ge "$midnight" ]; then
