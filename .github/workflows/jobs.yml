@@ -57,9 +57,16 @@ jobs:
 
       - name: Install ffmpeg and Telugu fonts
         if: steps.check.outputs.skip != 'true'
+        timeout-minutes: 12
         run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q ffmpeg fonts-noto-core fonts-noto-color-emoji
+          # Ubuntu's download servers sometimes hang; short timeouts + a few tries instead of waiting 20 minutes
+          for i in 1 2 3; do
+            sudo apt-get update -q -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 &&
+            sudo apt-get install -y -q -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 \
+              ffmpeg fonts-noto-core fonts-noto-color-emoji && break
+            echo "install try $i failed - waiting 30 s"; sleep 30
+          done
+          command -v ffmpeg
 
       - name: Install Python packages and browser
         if: steps.check.outputs.skip != 'true'
