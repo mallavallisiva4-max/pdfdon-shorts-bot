@@ -70,12 +70,27 @@ def setup():
     print(f"సేవ్ అయింది ✅  (token పనిచేస్తోంది)")
 
 
+def tick(name, token):
+    """Write state/<name>_tick.json; that push starts the matching GitHub workflow (GitHub's own timer is unreliable).
+    The workflow itself checks whether today's post is already up, so extra ticks never post twice."""
+    path = f"state/{name}_tick.json"
+    _, sha = read_repo_json(path, token)
+    body = {"message": f"{name} tick from laptop",
+            "content": base64.b64encode(json.dumps({"at": dt.datetime.now().isoformat(timespec="minutes")}).encode()).decode()}
+    if sha:
+        body["sha"] = sha
+    gh("PUT", f"contents/{path}", token, body)
+    log(f"{name} tick sent to GitHub")
+
+
 def main():
     if "--setup" in sys.argv:
         return setup()
     if not TOKEN_FILE.exists():
         log("no token - run: python -m bot.ap_fetch --setup"); return
     token = TOKEN_FILE.read_text(encoding="utf-8").strip()
+    if "--tick" in sys.argv:
+        return tick(sys.argv[sys.argv.index("--tick") + 1], token)
     done, _ = read_repo_json("state/jobs_done.json", token)
     done = set(done or [])
     items = []
@@ -100,7 +115,7 @@ def main():
         try:
             text = job_sources.pdf_text(c["url"])
         except Exception as e:
-            log(f"PDF failed {key}: {type(e).__name__}"); continue
+            log(f"PDF failed {key}: {type(e).__name__}: {str(e)[:150]}"); continue
         if len(text) < 500:
             continue  # scanned PDF, no text
         items.append({**c, "text": text})
@@ -116,9 +131,34 @@ def main():
     log(f"sent {len(items)} AP/TS notifications to GitHub")
 
 
+def online(host="api.github.com"):
+    import socket
+    try:
+        socket.getaddrinfo(host, 443)
+        return True
+    except OSError:
+        return False
+
+
 if __name__ == "__main__":
+    import time
+    # Right after the laptop wakes up the internet is often not connected yet: wait for it (up to 15 minutes).
+    for attempt in range(15):
+        if online():
+            break
+        if attempt == 0:
+            log("no internet yet - waiting for the connection")
+        time.sleep(60)
     try:
         main()
     except Exception as e:  # keep a trace in the log; the task runs hidden
         log(f"ERROR {type(e).__name__}: {e}")
-        raise
+        if isinstance(e, OSError) or "URLError" in type(e).__name__:   # network dropped mid-way: one more try
+            time.sleep(90)
+            try:
+                main()
+            except Exception as e2:
+                log(f"ERROR again {type(e2).__name__}: {e2}")
+                raise
+        else:
+            raise

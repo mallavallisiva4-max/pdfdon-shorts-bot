@@ -75,12 +75,26 @@ def ap_inbox():
 
 
 def _direct_or_inbox(read, source):
-    """Direct read when the site answers, else what the laptop sent for that source."""
+    """Direct read when the site answers, else what the laptop sent for that source.
+
+    Even when the list page answers, the PDFs often don't (AP/TS sites block foreign servers), so the PDF
+    text the laptop already downloaded is attached to the matching notifications, and laptop items missing
+    from the direct list are added too. Items with text come first."""
+    inbox = [x for x in ap_inbox() if x.get("source") == source]
     try:
-        return read()
+        items = read()
     except Exception as e:
         print(f"  {source} direct read failed ({type(e).__name__}) - using the laptop inbox")
-        return [x for x in ap_inbox() if x.get("source") == source]
+        return inbox
+    texts = {x["id"]: x for x in inbox if x.get("text")}
+    for it in items:
+        if it["id"] in texts:
+            it["text"] = texts[it["id"]]["text"]
+    seen = {it["id"] for it in items}
+    with_text = [it for it in items if it.get("text")] + [x for x in inbox if x["id"] not in seen]
+    without = [it for it in items if not it.get("text")]
+    print(f"  {source}: {len(with_text)} with laptop PDF text first, then {len(without)} direct-only")
+    return with_text + without
 
 
 def appsc_any():
